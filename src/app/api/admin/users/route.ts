@@ -9,7 +9,15 @@ export async function GET() {
   }
 
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
     return NextResponse.json(users);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -27,6 +35,12 @@ export async function PATCH(req: NextRequest) {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
     });
     return NextResponse.json(updatedUser);
   } catch (error: any) {

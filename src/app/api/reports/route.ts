@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
         const avgLat = cluster.reduce((sum, r) => sum + (r.location as any).coordinates[1], 0) / cluster.length;
         
         crowdAlerts.push({
-          id: `crowd-${report.id}`,
+          id: `crowd-${Math.random().toString(36).substr(2, 9)}`,
           type: cluster[0].type,
           description: `Community Alert: ${cluster.length} people reported this incident.`,
           location: { type: "Point", coordinates: [avgLng, avgLat] },
