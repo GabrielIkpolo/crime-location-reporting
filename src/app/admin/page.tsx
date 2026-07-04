@@ -14,14 +14,18 @@ const AdminHeatmap = dynamic(() => import("@/components/Map/AdminHeatmap"), {
 });
 
 export default function AdminPage() {
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch("/api/reports/admin");
+        const res = await fetch("/api/admin/reports");
         const data = await res.json();
-        setReports(data);
+        if (Array.isArray(data)) {
+          setReports(data);
+        } else {
+          console.error("Expected array of reports, got:", data);
+        }
       } catch (err) {
         console.error("Failed to fetch reports", err);
       }
@@ -39,10 +43,10 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="Total Reports" value={reports.length.toString()} trend="+12%" color="blue" />
-            <StatCard title="Pending Verification" value={reports.filter((r:any) => r.status === "PENDING").length.toString()} trend="Urgent" color="amber" />
-            <StatCard title="Verified Incidents" value={reports.filter((r:any) => r.status === "VERIFIED").length.toString()} trend="+5%" color="green" />
-            <StatCard title="High Risk Reports" value={reports.filter((r:any) => r.riskLevel === "HIGH").length.toString()} trend="Critical" color="red" />
+            <StatCard title="Total Reports" value={(reports?.length || 0).toString()} trend="+12%" color="blue" />
+            <StatCard title="Pending Verification" value={(reports?.filter((r:any) => r.status === "PENDING").length || 0).toString()} trend="Urgent" color="amber" />
+            <StatCard title="Verified Incidents" value={(reports?.filter((r:any) => r.status === "VERIFIED").length || 0).toString()} trend="+5%" color="green" />
+            <StatCard title="High Risk Reports" value={(reports?.filter((r:any) => r.riskLevel === "HIGH").length || 0).toString()} trend="Critical" color="red" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -18,9 +18,13 @@ export default function ReportsQueuePage() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch("/api/reports/admin");
+        const res = await fetch("/api/admin/reports");
         const data = await res.json();
-        setReports(data);
+        if (Array.isArray(data)) {
+          setReports(data);
+        } else {
+          console.error("Expected array of reports, got:", data);
+        }
       } catch (err) {
         console.error("Failed to fetch reports", err);
       } finally {
