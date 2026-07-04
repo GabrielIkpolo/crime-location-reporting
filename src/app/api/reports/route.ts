@@ -2,30 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { reportSchema } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(req: NextRequest) {
   try {
     console.log("[REPORTS_API] Received POST request");
+    
+    // 1. Rate Limiting
+    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
+    const rateLimit = checkRateLimit(ipAddress);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many reports. Please try again in an hour." }, { status: 429 });
+    }
+
     const session = await auth();
     const body = await req.json();
     console.log("[REPORTS_API] Body:", JSON.stringify(body, null, 2));
 
-    // 1. Validation
+    // 2. Validation
     const result = reportSchema.safeParse(body);
     if (!result.success) {
       const firstError = result.error.issues[0]?.message || "Invalid report data";
+      console.log("[REPORTS_API] Validation failed:", firstError);
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
     const validatedData = result.data;
 
-    // 2. Capture IP and Device Info
-    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
+    // 3. Capture Device Info
     const userAgent = req.headers.get("user-agent") || "Unknown";
 
-    // 3. Similarity Engine (Anti-Spam & Grouping)
-    // Check if a similar report exists: Same type, within 100m, within 3 hours
-    const DISTANCE_THRESHOLD = 0.001; // Roughly 100 meters
-    const TIME_THRESHOLD = 3 * 60 * 60 * 1000; // 3 hours in ms
+    // 4. Similarity Engine (Anti-Spam & Grouping)
+    const DISTANCE_THRESHOLD = 0.001; 
+    const TIME_THRESHOLD = 3 * 60 * 60 * 1000; 
     const threeHoursAgo = new Date(Date.now() - TIME_THRESHOLD);
 
     const existingReport = await prisma.report.findFirst({
@@ -37,7 +45,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingReport) {
-      // Simple distance check on existing reports (could be optimized with MongoDB $near)
       const coords = (existingReport.location as any).coordinates;
       const dist = Math.sqrt(
         Math.pow(coords[0] - validatedData.location.coordinates[0], 2) +
@@ -50,7 +57,6 @@ export async function POST(req: NextRequest) {
           where: { id: existingReport.id },
           data: { 
             confirmationCount: { increment: 1 },
-            // We also update the location to the average of the two for better accuracy
             location: {
               type: "Point",
               coordinates: [
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Create New Report
+    // 5. Create New Report
     console.log("[REPORTS_API] Creating new report in database...");
     const report = await prisma.report.create({
       data: {

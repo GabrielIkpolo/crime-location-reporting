@@ -6,6 +6,7 @@ import "leaflet.markercluster";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, AlertTriangle } from "lucide-react";
+import { sanitizeHTML } from "@/lib/utils-security";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
@@ -85,8 +86,8 @@ function MarkerClusterLayer({ reports }: { reports: any[] }) {
       const marker = L.marker([report.location.coordinates[1], report.location.coordinates[0]]);
       marker.bindPopup(`
         <div class="p-1">
-          <strong class="block text-sm">${report.type}</strong>
-          <p class="text-xs text-muted-foreground">${report.description}</p>
+          <strong class="block text-sm">${sanitizeHTML(report.type)}</strong>
+          <p class="text-xs text-muted-foreground">${sanitizeHTML(report.description)}</p>
           <div class="mt-2 text-[10px] font-bold text-green-600">✓ Officially Verified</div>
         </div>
       `);
@@ -113,7 +114,7 @@ function CommunityAlertLayer({ alerts }: { alerts: any[] }) {
           <div class="flex items-center justify-center gap-1 text-orange-600 font-bold text-sm mb-1">
             <AlertTriangle className="w-3 h-3" /> Community Alert
           </div>
-          <p class="text-xs font-medium">${alert.type}</p>
+          <p class="text-xs font-medium">${sanitizeHTML(alert.type)}</p>
           <p class="text-[10px] text-muted-foreground mt-1">
             Reported by ${alert.reportCount} citizens. <br/>
             <span className="italic">Awaiting official verification.</span>

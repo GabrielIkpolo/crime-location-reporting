@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
         const res = await fetch("/api/admin/settings");
         if (res.ok) {
           const data = await res.json();
-          const mapped = {};
+          const mapped: { [key: string]: string } = {};
           data.forEach((s: any) => {
             mapped[s.key] = s.value;
           });

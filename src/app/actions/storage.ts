@@ -16,8 +16,25 @@ export async function uploadMediaAction(formData: FormData) {
   const uploadedUrls = [];
 
   const isDev = process.env.NODE_ENV === 'development';
+  
+  // Security Constants
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_TYPES = [
+    'image/jpeg', 'image/png', 'image/webp', 
+    'video/mp4', 'video/quicktime', 'video/webm'
+  ];
 
   for (const file of files) {
+    // 1. Size Validation
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(`File ${file.name} exceeds the 10MB limit.`);
+    }
+
+    // 2. MIME Type Validation
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      throw new Error(`File ${file.name} has an invalid type. Only images and videos are allowed.`);
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     
     if (isDev) {
