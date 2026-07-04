@@ -61,11 +61,18 @@ export default function ReportCrimePage() {
       const { urls } = await uploadMediaAction(uploadFormData);
 
       // 2. Validate data
-      const validatedData = reportSchema.parse({
+      const validation = reportSchema.safeParse({
         ...formData,
         location: { type: "Point", coordinates: location },
         mediaUrls: urls,
       });
+
+      if (!validation.success) {
+        const firstError = validation.error.issues[0]?.message || "Invalid report data";
+        throw new Error(firstError);
+      }
+
+      const validatedData = validation.data;
 
       // 3. Submit to API
       const response = await fetch("/api/reports", {
@@ -74,7 +81,10 @@ export default function ReportCrimePage() {
         body: JSON.stringify(validatedData),
       });
 
-      if (!response.ok) throw new Error("Submission failed");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Submission failed");
+      }
 
       toast.success("Report submitted successfully!", {
         description: "Thank you for helping keep the community safe.",

@@ -1,19 +1,55 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldAlert, Mail, Lock, ArrowRight } from "lucide-react";
+import { ShieldAlert, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { PageTransition } from "@/components/ui/PageTransition";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
   const handleGoogleSignIn = async () => {
     await signIn("google", { callbackUrl: "/" });
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error("Login Failed", {
+          description: "Invalid email or password. Please try again.",
+        });
+      } else {
+        toast.success("Welcome back!");
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err: any) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,33 +77,51 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="email" type="email" placeholder="name@example.com" className="pl-10" />
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="name@example.com" 
+                      className="pl-10" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type="password" placeholder="••••••••" className="pl-10" />
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-10" 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary" />
-                  <span>Remember me</span>
-                </label>
-                <Link href="/forgot-password" className="text-primary hover:underline font-medium">
-                  Forgot password?
-                </Link>
-              </div>
-              <Button className="w-full gap-2 py-6 text-lg" disabled>
-                Sign In
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary" />
+                    <span>Remember me</span>
+                  </label>
+                  <Link href="/forgot-password" className="text-primary hover:underline font-medium">
+                    Forgot password?
+                  </Link>
+                </div>
+                <Button type="submit" className="w-full gap-2 py-6 text-lg" disabled={loading}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                  Sign In
+                </Button>
+              </form>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <div className="relative w-full">

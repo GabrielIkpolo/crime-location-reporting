@@ -43,6 +43,15 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {session ? (
             <div className="flex items-center gap-3">
+              <Link 
+                href="/my-reports" 
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  pathname === "/my-reports" ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                My Reports
+              </Link>
               <div className="hidden sm:flex items-center gap-2 text-sm font-medium">
                 <User className="w-4 h-4" />
                 <span>{session.user?.name}</span>

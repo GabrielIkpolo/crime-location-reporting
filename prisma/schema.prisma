@@ -46,6 +46,8 @@ model Report {
   location      Json         // Stores GeoJSON { type: "Point", coordinates: [lng, lat] }
   mediaUrls     String[]
   isAnonymous   Boolean      @default(false)
+  ipAddress     String?
+  userAgent     String?
   reporter      User?        @relation(fields: [reporterId], references: [id])
   reporterId    String?      @db.ObjectId
   adminLogs     AdminLog[]
