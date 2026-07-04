@@ -48,6 +48,7 @@ model Report {
   isAnonymous   Boolean      @default(false)
   ipAddress     String?
   userAgent     String?
+  confirmationCount Int      @default(1)
   reporter      User?        @relation(fields: [reporterId], references: [id])
   reporterId    String?      @db.ObjectId
   adminLogs     AdminLog[]

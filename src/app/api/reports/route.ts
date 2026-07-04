@@ -9,13 +9,11 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     const body = await req.json();
     console.log("[REPORTS_API] Body:", JSON.stringify(body, null, 2));
-    console.log("[REPORTS_API] Session User ID:", session?.user?.id);
 
     // 1. Validation
     const result = reportSchema.safeParse(body);
     if (!result.success) {
       const firstError = result.error.issues[0]?.message || "Invalid report data";
-      console.log("[REPORTS_API] Validation failed:", firstError);
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
     const validatedData = result.data;
@@ -24,8 +22,50 @@ export async function POST(req: NextRequest) {
     const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
     const userAgent = req.headers.get("user-agent") || "Unknown";
 
-    // 3. Create Report
-    console.log("[REPORTS_API] Creating report in database...");
+    // 3. Similarity Engine (Anti-Spam & Grouping)
+    // Check if a similar report exists: Same type, within 100m, within 3 hours
+    const DISTANCE_THRESHOLD = 0.001; // Roughly 100 meters
+    const TIME_THRESHOLD = 3 * 60 * 60 * 1000; // 3 hours in ms
+    const threeHoursAgo = new Date(Date.now() - TIME_THRESHOLD);
+
+    const existingReport = await prisma.report.findFirst({
+      where: {
+        type: validatedData.type,
+        status: "PENDING",
+        createdAt: { gte: threeHoursAgo },
+      },
+    });
+
+    if (existingReport) {
+      // Simple distance check on existing reports (could be optimized with MongoDB $near)
+      const coords = (existingReport.location as any).coordinates;
+      const dist = Math.sqrt(
+        Math.pow(coords[0] - validatedData.location.coordinates[0], 2) +
+        Math.pow(coords[1] - validatedData.location.coordinates[1], 2)
+      );
+
+      if (dist < DISTANCE_THRESHOLD) {
+        console.log("[REPORTS_API] Similar report found. Incrementing confirmation count.");
+        const updatedReport = await prisma.report.update({
+          where: { id: existingReport.id },
+          data: { 
+            confirmationCount: { increment: 1 },
+            // We also update the location to the average of the two for better accuracy
+            location: {
+              type: "Point",
+              coordinates: [
+                (coords[0] + validatedData.location.coordinates[0]) / 2,
+                (coords[1] + validatedData.location.coordinates[1]) / 2,
+              ]
+            }
+          },
+        });
+        return NextResponse.json({ ...updatedReport, message: "Similar report detected. Confirmation added." }, { status: 200 });
+      }
+    }
+
+    // 4. Create New Report
+    console.log("[REPORTS_API] Creating new report in database...");
     const report = await prisma.report.create({
       data: {
         type: validatedData.type,
@@ -36,10 +76,10 @@ export async function POST(req: NextRequest) {
         ipAddress,
         userAgent,
         reporterId: session?.user?.id || null,
+        confirmationCount: 1,
       },
     });
 
-    console.log("[REPORTS_API] Report created successfully: ", report.id);
     return NextResponse.json(report, { status: 201 });
   } catch (error: any) {
     console.error("[REPORTS_API] ERROR:", error);
@@ -49,14 +89,24 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Fetch all verified reports
+    // Data Decay: Only show reports from the last 30 days for public view
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // 1. Fetch verified reports from last 30 days
     const verifiedReports = await prisma.report.findMany({
-      where: { status: "VERIFIED" },
+      where: { 
+        status: "VERIFIED",
+        createdAt: { gte: thirtyDaysAgo }
+      },
     });
 
-    // 2. Fetch all pending reports to analyze crowdsourced urgency
+    // 2. Fetch pending reports from last 30 days for crowdsourced urgency
     const pendingReports = await prisma.report.findMany({
-      where: { status: "PENDING" },
+      where: { 
+        status: "PENDING",
+        createdAt: { gte: thirtyDaysAgo }
+      },
     });
 
     // 3. Spatial Clustering Logic for Pending Reports
