@@ -65,3 +65,10 @@ model AdminLog {
   action    String
   timestamp DateTime @default(now())
 }
+
+model SystemSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
