@@ -38,7 +38,7 @@ export async function uploadMediaAction(formData: FormData) {
     const buffer = Buffer.from(await file.arrayBuffer());
     
     if (isDev) {
-      const uniqueFileName = `${Date.now()}-${file.name}`;
+      const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase()}`;
       const filePath = path.join(process.cwd(), 'public/uploads', uniqueFileName);
       await writeFile(filePath, buffer);
       uploadedUrls.push(`/uploads/${uniqueFileName}`);
