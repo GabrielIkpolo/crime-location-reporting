@@ -1,23 +1,23 @@
-# 🛡️ Crime Location Reporting System
+# Crime Location Reporting System
 
 A professional, real-time public safety ecosystem allowing citizens to report crimes via GPS/Maps and providing security agencies with a data-driven admin dashboard to monitor and validate hotspots.
 
-## 🌟 Core Features
+## Core Features
 
-### 📱 For Citizens
+### For Citizens
 - **Intelligent Reporting**: Report incidents with precise GPS coordinates, descriptions, and media evidence.
 - **Anonymous Mode**: Option to submit reports without revealing identity while maintaining security audit trails.
 - **Public Safety Dashboard**: An interactive map showing verified crime hotspots and real-time "Community Alerts" (crowdsourced urgency).
 - **My Reports Portal**: Track the status of submitted reports from `Pending` to `Verified` or `Rejected`.
 - **User Accounts**: Secure registration and login with Google OAuth support.
 
-### 👮 For Security Agencies (Admin)
+### For Security Agencies (Admin)
 - **Verification Queue**: Review incoming reports and update status/risk levels.
 - **Analytical Command Center**: High-level statistics and an analytical heatmap for hotspot detection.
 - **User Management**: Manage system access and administrative roles.
 - **Audit Logging**: Full transparency of all administrative actions.
 
-## 🛠️ Technical Stack
+## Technical Stack
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS & Shadcn UI
@@ -27,7 +27,7 @@ A professional, real-time public safety ecosystem allowing citizens to report cr
 - **Storage**: Hybrid (Local for Dev, Cloudinary for Prod)
 - **Notifications**: Sonner (Toast Notifications)
 
-## ⚙️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - Node.js 18+
@@ -68,7 +68,7 @@ A professional, real-time public safety ecosystem allowing citizens to report cr
    pnpm dev
    ```
 
-## 📜 Legal & Trust
+## Legal & Trust
 - **Privacy First**: We log basic device metadata to prevent system abuse.
 - **Community-Driven**: The map balances official verification with crowdsourced urgency warnings.
 - **Disclaimer**: This is a tool for awareness; always contact emergency services for active crises.
