@@ -1,0 +1,351 @@
+
+> crime-location-reporting-system@0.1.0 build /home/angelis/NodeProjects/crime-location-reporting-system
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /home/angelis/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /home/angelis/NodeProjects/crime-location-reporting-system/pnpm-workspace.yaml
+
+▲ Next.js 16.2.10 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 15 errors:
+./NodeProjects/crime-location-reporting-system/src/app/admin/page.tsx:74:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  [90m72 |[0m     </[33mAdminLayout[0m>
+  [90m73 |[0m   );
+[31m[1m>[0m [90m74 |[0m }
+  [90m   |[0m [31m[1m^[0m
+  [90m75 |[0m
+  [90m76 |[0m [36mfunction[0m [33mStatCard[0m({ title, value, trend, color }: { title: string, value: string, trend: s...
+  [90m77 |[0m   [36mconst[0m colorClasses = {
+
+Parsing ecmascript source code failed
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/logs/page.tsx:3:20
+You're importing a module that depends on `useEffect` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m1 |[0m [36mimport[0m [33mAdminLayout[0m [36mfrom[0m [32m"@/components/layout/AdminLayout"[0m;
+  [90m2 |[0m [36mimport[0m { [33mTable[0m, [33mTableBody[0m, [33mTableCell[0m, [33mTableHead[0m, [33mTableHeader[0m, [33mTableRow[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m3 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m                    [31m[1m^^^^^^^^^[0m
+  [90m4 |[0m [36mimport[0m { [33mLoader2[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m5 |[0m
+  [90m6 |[0m [36mexport[0m [36mdefault[0m [36mfunction[0m [33mAdminLogsPage[0m() {
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/reports/page.tsx:6:20
+You're importing a module that depends on `useEffect` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m4 |[0m [36mimport[0m { [33mBadge[0m } [36mfrom[0m [32m"@/components/ui/badge"[0m;
+  [90m5 |[0m [36mimport[0m { [33mSelect[0m, [33mSelectContent[0m, [33mSelectItem[0m, [33mSelectTrigger[0m, [33mSelectValue[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m                    [31m[1m^^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mLoader2[0m, [33mCheck[0m, [33mX[0m, [33mAlertTriangle[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m8 |[0m [36mimport[0m { toast } [36mfrom[0m [32m"sonner"[0m;
+  [90m9 |[0m
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/users/page.tsx:6:20
+You're importing a module that depends on `useEffect` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m4 |[0m [36mimport[0m { [33mBadge[0m } [36mfrom[0m [32m"@/components/ui/badge"[0m;
+  [90m5 |[0m [36mimport[0m { [33mSelect[0m, [33mSelectContent[0m, [33mSelectItem[0m, [33mSelectTrigger[0m, [33mSelectValue[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m                    [31m[1m^^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mLoader2[0m, [33mUserCog[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m8 |[0m
+  [90m9 |[0m [36mexport[0m [36mdefault[0m [36mfunction[0m [33mUserManagementPage[0m() {
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/logs/page.tsx:3:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m1 |[0m [36mimport[0m [33mAdminLayout[0m [36mfrom[0m [32m"@/components/layout/AdminLayout"[0m;
+  [90m2 |[0m [36mimport[0m { [33mTable[0m, [33mTableBody[0m, [33mTableCell[0m, [33mTableHead[0m, [33mTableHeader[0m, [33mTableRow[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m3 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m          [31m[1m^^^^^^^^[0m
+  [90m4 |[0m [36mimport[0m { [33mLoader2[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m5 |[0m
+  [90m6 |[0m [36mexport[0m [36mdefault[0m [36mfunction[0m [33mAdminLogsPage[0m() {
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/reports/page.tsx:6:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m4 |[0m [36mimport[0m { [33mBadge[0m } [36mfrom[0m [32m"@/components/ui/badge"[0m;
+  [90m5 |[0m [36mimport[0m { [33mSelect[0m, [33mSelectContent[0m, [33mSelectItem[0m, [33mSelectTrigger[0m, [33mSelectValue[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m          [31m[1m^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mLoader2[0m, [33mCheck[0m, [33mX[0m, [33mAlertTriangle[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m8 |[0m [36mimport[0m { toast } [36mfrom[0m [32m"sonner"[0m;
+  [90m9 |[0m
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/admin/users/page.tsx:6:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  [90m4 |[0m [36mimport[0m { [33mBadge[0m } [36mfrom[0m [32m"@/components/ui/badge"[0m;
+  [90m5 |[0m [36mimport[0m { [33mSelect[0m, [33mSelectContent[0m, [33mSelectItem[0m, [33mSelectTrigger[0m, [33mSelectValue[0m } [36mfrom[0m [32m"@/components...[0m
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { useState, useEffect } [36mfrom[0m [32m"react"[0m;
+  [90m  |[0m          [31m[1m^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mLoader2[0m, [33mUserCog[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m8 |[0m
+  [90m9 |[0m [36mexport[0m [36mdefault[0m [36mfunction[0m [33mUserManagementPage[0m() {
+
+Ecmascript file had an error
+
+
+./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:7:1
+Module not found: Can't resolve '@/components/ui/input'
+  [90m 5 |[0m [36mimport[0m { [33mButton[0m } [36mfrom[0m [32m"@/components/ui/button"[0m;
+  [90m 6 |[0m [36mimport[0m { [33mCard[0m, [33mCardContent[0m, [33mCardHeader[0m, [33mCardTitle[0m } [36mfrom[0m [32m"@/components/ui/card"[0m;
+[31m[1m>[0m [90m 7 |[0m [36mimport[0m { [33mInput[0m } [36mfrom[0m [32m"@/components/ui/input"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 8 |[0m [36mimport[0m { [33mTextarea[0m } [36mfrom[0m [32m"@/components/ui/textarea"[0m;
+  [90m 9 |[0m [36mimport[0m { [33mLabel[0m } [36mfrom[0m [32m"@/components/ui/label"[0m;
+  [90m10 |[0m [36mimport[0m { [33mSwitch[0m } [36mfrom[0m [32m"@/components/ui/switch"[0m;
+
+Import map: aliased to relative './src/components/ui/input' inside of [project]/NodeProjects/crime-location-reporting-system
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:9:1
+Module not found: Can't resolve '@/components/ui/label'
+  [90m 7 |[0m [36mimport[0m { [33mInput[0m } [36mfrom[0m [32m"@/components/ui/input"[0m;
+  [90m 8 |[0m [36mimport[0m { [33mTextarea[0m } [36mfrom[0m [32m"@/components/ui/textarea"[0m;
+[31m[1m>[0m [90m 9 |[0m [36mimport[0m { [33mLabel[0m } [36mfrom[0m [32m"@/components/ui/label"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m10 |[0m [36mimport[0m { [33mSwitch[0m } [36mfrom[0m [32m"@/components/ui/switch"[0m;
+  [90m11 |[0m [36mimport[0m { [33mLoader2[0m, [33mMapPin[0m, [33mUpload[0m, [33mAlertCircle[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m12 |[0m [36mimport[0m { reportSchema, [33mReportInput[0m } [36mfrom[0m [32m"@/lib/validations"[0m;
+
+Import map: aliased to relative './src/components/ui/label' inside of [project]/NodeProjects/crime-location-reporting-system
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:10:1
+Module not found: Can't resolve '@/components/ui/switch'
+  [90m 8 |[0m [36mimport[0m { [33mTextarea[0m } [36mfrom[0m [32m"@/components/ui/textarea"[0m;
+  [90m 9 |[0m [36mimport[0m { [33mLabel[0m } [36mfrom[0m [32m"@/components/ui/label"[0m;
+[31m[1m>[0m [90m10 |[0m [36mimport[0m { [33mSwitch[0m } [36mfrom[0m [32m"@/components/ui/switch"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m11 |[0m [36mimport[0m { [33mLoader2[0m, [33mMapPin[0m, [33mUpload[0m, [33mAlertCircle[0m } [36mfrom[0m [32m"lucide-react"[0m;
+  [90m12 |[0m [36mimport[0m { reportSchema, [33mReportInput[0m } [36mfrom[0m [32m"@/lib/validations"[0m;
+  [90m13 |[0m [36mimport[0m { z } [36mfrom[0m [32m"zod"[0m;
+
+Import map: aliased to relative './src/components/ui/switch' inside of [project]/NodeProjects/crime-location-reporting-system
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:8:1
+Module not found: Can't resolve '@/components/ui/textarea'
+  [90m 6 |[0m [36mimport[0m { [33mCard[0m, [33mCardContent[0m, [33mCardHeader[0m, [33mCardTitle[0m } [36mfrom[0m [32m"@/components/ui/card"[0m;
+  [90m 7 |[0m [36mimport[0m { [33mInput[0m } [36mfrom[0m [32m"@/components/ui/input"[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { [33mTextarea[0m } [36mfrom[0m [32m"@/components/ui/textarea"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mLabel[0m } [36mfrom[0m [32m"@/components/ui/label"[0m;
+  [90m10 |[0m [36mimport[0m { [33mSwitch[0m } [36mfrom[0m [32m"@/components/ui/switch"[0m;
+  [90m11 |[0m [36mimport[0m { [33mLoader2[0m, [33mMapPin[0m, [33mUpload[0m, [33mAlertCircle[0m } [36mfrom[0m [32m"lucide-react"[0m;
+
+Import map: aliased to relative './src/components/ui/textarea' inside of [project]/NodeProjects/crime-location-reporting-system
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/uploader.js:1:12
+Module not found: Can't resolve 'fs'
+[31m[1m>[0m [90m1 |[0m [36mconst[0m fs = require([32m'fs'[0m);
+  [90m  |[0m            [31m[1m^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mconst[0m {
+  [90m3 |[0m   extname,
+  [90m4 |[0m   basename
+
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/uploader.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/cloudinary.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/cloudinary.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/uploader.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/cloudinary.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/cloudinary.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/utils/analytics/getSDKVersions.js:1:12
+Module not found: Can't resolve 'fs'
+[31m[1m>[0m [90m1 |[0m [36mconst[0m fs = require([32m'fs'[0m);
+  [90m  |[0m            [31m[1m^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mconst[0m path = require([32m'path'[0m);
+  [90m3 |[0m [36mconst[0m sdkCode = [32m'M'[0m; [90m// Constant per SDK[0m
+  [90m4 |[0m
+
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/utils/analytics/getSDKVersions.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/utils/index.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/cloudinary.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/cloudinary.js [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/utils/analytics/getSDKVersions.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/utils/index.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/lib/cloudinary.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/node_modules/.pnpm/cloudinary@2.10.0/node_modules/cloudinary/cloudinary.js [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/src/lib/storage.ts:2:1
+Module not found: Can't resolve 'fs/promises'
+  [90m1 |[0m [36mimport[0m { v2 [36mas[0m cloudinary } [36mfrom[0m [32m'cloudinary'[0m;
+[31m[1m>[0m [90m2 |[0m [36mimport[0m fs [36mfrom[0m [32m'fs/promises'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m;
+  [90m4 |[0m [36mimport[0m { writeFile } [36mfrom[0m [32m'fs/promises'[0m;
+  [90m5 |[0m
+
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./NodeProjects/crime-location-reporting-system/src/lib/storage.ts:4:1
+Module not found: Can't resolve 'fs/promises'
+  [90m2 |[0m [36mimport[0m fs [36mfrom[0m [32m'fs/promises'[0m;
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m;
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { writeFile } [36mfrom[0m [32m'fs/promises'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m [90m// Configure Cloudinary[0m
+  [90m7 |[0m cloudinary.config({
+
+
+
+Import traces:
+  Client Component Browser:
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component Browser]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./NodeProjects/crime-location-reporting-system/src/lib/storage.ts [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Client Component SSR]
+    ./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/page.tsx:74:1)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/logs/page.tsx:3:20)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/reports/page.tsx:6:20)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/users/page.tsx:6:20)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/logs/page.tsx:3:10)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/reports/page.tsx:6:10)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/admin/users/page.tsx:6:10)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/app/report/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/lib/storage.ts:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./NodeProjects/crime-location-reporting-system/src/lib/storage.ts:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+ ELIFECYCLE  Command failed with exit code 1.

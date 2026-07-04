@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ReportStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  password      String?
+  name          String?
+  image         String?
+  role          UserRole  @default(USER)
+  reports       Report[]
+  adminLogs     AdminLog[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Report {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  type          String
+  description   String
+  status        ReportStatus @default(PENDING)
+  riskLevel     RiskLevel    @default(LOW)
+  location      Json         // Stores GeoJSON { type: "Point", coordinates: [lng, lat] }
+  mediaUrls     String[]
+  isAnonymous   Boolean      @default(false)
+  reporter      User?        @relation(fields: [reporterId], references: [id])
+  reporterId    String?      @db.ObjectId
+  adminLogs     AdminLog[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model AdminLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  admin     User     @relation(fields: [adminId], references: [id])
+  adminId   String   @db.ObjectId
+  report    Report   @relation(fields: [reportId], references: [id])
+  reportId  String   @db.ObjectId
+  action    String
+  timestamp DateTime @default(now())
+}
