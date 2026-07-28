@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!// session || (session.user as any).role !== "ADMIN") {
+  if (!session || (session.user as any).role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -44,7 +44,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const updatedReport = await prisma.report.update({
       where: { id },
-      data: { status, riskLevel },
+      data: { 
+        status: status as any, 
+        riskLevel: riskLevel as any 
+      },
     });
 
     return NextResponse.json(updatedReport);

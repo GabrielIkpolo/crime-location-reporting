@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export const CRIME_TYPES = [
+  "Theft",
+  "Assault",
+  "Robbery",
+  "Vandalism",
+  "Burglary",
+  "Harassment",
+  "Fraud",
+  "Drug Related",
+  "Other"
+] as const;
+
 export const userRegisterSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -12,17 +24,17 @@ export const userLoginSchema = z.object({
 });
 
 export const reportSchema = z.object({
-  type: z.string().min(1, "Crime type is required"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  type: z.enum(CRIME_TYPES),
+  description: z.string().min(10, "Description must be at least 10 characters").max(1000, "Description too long"),
   location: z.object({
     type: z.literal("Point"),
     coordinates: z.tuple([
-      z.number(), // longitude
-      z.number(), // latitude
+      z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180"),
+      z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90"),
     ]),
   }),
   isAnonymous: z.boolean().optional().default(false),
-  mediaUrls: z.array(z.string()).optional(),
+  mediaUrls: z.array(z.string().url("Invalid media URL")).optional(),
 });
 
 export type UserRegisterInput = z.infer<typeof userRegisterSchema>;

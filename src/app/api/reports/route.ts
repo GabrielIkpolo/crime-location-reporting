@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { reportSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { haversineDistance } from "@/lib/geo-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,13 +18,11 @@ export async function POST(req: NextRequest) {
 
     const session = await auth();
     const body = await req.json();
-    console.log("[REPORTS_API] Body:", JSON.stringify(body, null, 2));
 
     // 2. Validation
     const result = reportSchema.safeParse(body);
     if (!result.success) {
       const firstError = result.error.issues[0]?.message || "Invalid report data";
-      console.log("[REPORTS_API] Validation failed:", firstError);
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
     const validatedData = result.data;
@@ -32,7 +31,7 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get("user-agent") || "Unknown";
 
     // 4. Similarity Engine (Anti-Spam & Grouping)
-    const DISTANCE_THRESHOLD = 0.001; 
+    const DISTANCE_THRESHOLD_KM = 0.2; // 200 meters
     const TIME_THRESHOLD = 3 * 60 * 60 * 1000; 
     const threeHoursAgo = new Date(Date.now() - TIME_THRESHOLD);
 
@@ -46,12 +45,14 @@ export async function POST(req: NextRequest) {
 
     if (existingReport) {
       const coords = (existingReport.location as any).coordinates;
-      const dist = Math.sqrt(
-        Math.pow(coords[0] - validatedData.location.coordinates[0], 2) +
-        Math.pow(coords[1] - validatedData.location.coordinates[1], 2)
+      const dist = haversineDistance(
+        coords[1], // lat
+        coords[0], // lng
+        validatedData.location.coordinates[1], // lat
+        validatedData.location.coordinates[0]  // lng
       );
 
-      if (dist < DISTANCE_THRESHOLD) {
+      if (dist < DISTANCE_THRESHOLD_KM) {
         console.log("[REPORTS_API] Similar report found. Incrementing confirmation count.");
         const updatedReport = await prisma.report.update({
           where: { id: existingReport.id },
@@ -71,7 +72,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Create New Report
-    console.log("[REPORTS_API] Creating new report in database...");
     const report = await prisma.report.create({
       data: {
         type: validatedData.type,
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         isAnonymous: validatedData.isAnonymous,
         ipAddress,
         userAgent,
-        reporterId: session?.user?.id || null,
+        reporterId: validatedData.isAnonymous ? null : (session?.user?.id || null),
         confirmationCount: 1,
       },
     });
@@ -115,41 +115,73 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 3. Spatial Clustering Logic for Pending Reports
+    // 3. Spatial Clustering Logic for Pending Reports (Optimized)
     const crowdAlerts: any[] = [];
-    const processedIds = new Set();
-    const DISTANCE_THRESHOLD = 0.002; 
+    const processedIds = new Set<string>();
+    const DISTANCE_THRESHOLD_KM = 0.5; // 500 meters
     const COUNT_THRESHOLD = 5; 
 
-    for (let i = 0; i < pendingReports.length; i++) {
-      const report = pendingReports[i];
+    // Sort reports by latitude to allow for efficient neighbor searching
+    const sortedReports = [...pendingReports].sort((a, b) => 
+      (a.location as any).coordinates[1] - (b.location as any).coordinates[1]
+    );
+
+    for (let i = 0; i < sortedReports.length; i++) {
+      const report = sortedReports[i];
       if (processedIds.has(report.id)) continue;
 
-      const cluster = pendingReports.filter(r => {
-        if (!r.location || !report.location) return false;
-        const dist = Math.sqrt(
-          Math.pow((r.location as any).coordinates[0] - (report.location as any).coordinates[0], 2) +
-          Math.pow((r.location as any).coordinates[1] - (report.location as any).coordinates[1], 2)
-        );
-        return dist < DISTANCE_THRESHOLD;
-      });
+      const reportLoc = report.location as any;
+      if (!reportLoc || !reportLoc.coordinates) continue;
 
-      if (cluster.length >= COUNT_THRESHOLD) {
-        const avgLng = cluster.reduce((sum, r) => sum + (r.location as any).coordinates[0], 0) / cluster.length;
-        const avgLat = cluster.reduce((sum, r) => sum + (r.location as any).coordinates[1], 0) / cluster.length;
+      const currentLat = reportLoc.coordinates[1];
+      const currentLng = reportLoc.coordinates[0];
+
+      const cluster = [];
+      
+      // Search neighbors in sorted list (Forward)
+      for (let j = i + 1; j < sortedReports.length; j++) {
+        const other = sortedReports[j];
+        if (processedIds.has(other.id)) continue;
+        
+        const otherLoc = other.location as any;
+        if (!otherLoc || !otherLoc.coordinates) continue;
+
+        // Since it's sorted by latitude, if the difference is too large, 
+        // we can stop looking forward.
+        // 1 degree lat ~ 111km. So 0.5km ~ 0.0045 degrees.
+        const latDiff = otherLoc.coordinates[1] - currentLat;
+        if (latDiff > 0.01) break; 
+
+        const dist = haversineDistance(
+          currentLat,
+          currentLng,
+          otherLoc.coordinates[1],
+          otherLoc.coordinates[0]
+        );
+
+        if (dist < DISTANCE_THRESHOLD_KM) {
+          cluster.push(other);
+        }
+      }
+
+      // Include the report itself in the cluster check
+      if (cluster.length + 1 >= COUNT_THRESHOLD) {
+        const allInCluster = [report, ...cluster];
+        const avgLng = allInCluster.reduce((sum, r) => sum + (r.location as any).coordinates[0], 0) / allInCluster.length;
+        const avgLat = allInCluster.reduce((sum, r) => sum + (r.location as any).coordinates[1], 0) / allInCluster.length;
         
         crowdAlerts.push({
           id: `crowd-${Math.random().toString(36).substr(2, 9)}`,
-          type: cluster[0].type,
-          description: `Community Alert: ${cluster.length} people reported this incident.`,
+          type: report.type,
+          description: `Community Alert: ${allInCluster.length} people reported this incident.`,
           location: { type: "Point", coordinates: [avgLng, avgLat] },
           status: "CROWD_REPORTED",
           riskLevel: "MEDIUM",
-          reportCount: cluster.length,
+          reportCount: allInCluster.length,
           createdAt: new Date(),
         });
         
-        cluster.forEach(r => processedIds.add(r.id));
+        allInCluster.forEach(r => processedIds.add(r.id));
       }
     }
 
@@ -158,6 +190,7 @@ export async function GET(req: NextRequest) {
       communityAlerts: crowdAlerts,
     });
   } catch (error: any) {
+    console.error("[REPORTS_API_GET] ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

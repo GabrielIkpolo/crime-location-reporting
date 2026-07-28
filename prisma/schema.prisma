@@ -16,6 +16,7 @@ enum ReportStatus {
   PENDING
   VERIFIED
   REJECTED
+  CROWD_REPORTED
 }
 
 enum RiskLevel {
