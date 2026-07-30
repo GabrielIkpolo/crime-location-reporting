@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, MapPin, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
-import { reportSchema } from "@/lib/validations";
+import { Loader2, MapPin, Upload, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { reportSchema, CRIME_TYPES } from "@/lib/validations";
 import { uploadMediaAction } from "@/app/actions/storage";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/PageTransition";
@@ -45,8 +46,19 @@ export default function ReportCrimePage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const newFiles = Array.from(e.target.files);
+      setFiles((prev) => [...prev, ...newFiles]);
     }
+    // Reset input value so same file can be selected again if removed
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearFiles = () => {
+    setFiles([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,13 +66,28 @@ export default function ReportCrimePage() {
     setLoading(true);
 
     try {
-      // 1. Handle Media Uploads
+      // 1. Pre-submit Client-side Validation
+      for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 10MB).`);
+        }
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
+        if (!validTypes.includes(file.type)) {
+          throw new Error(`File ${file.name} is an invalid type.`);
+        }
+      }
+
+      // 2. Handle Media Uploads
       const uploadFormData = new FormData();
       files.forEach(file => uploadFormData.append('files', file));
       
-      const { urls } = await uploadMediaAction(uploadFormData);
+      let urls: string[] = [];
+      if (files.length > 0) {
+        const uploadResult = await uploadMediaAction(uploadFormData);
+        urls = uploadResult.urls;
+      }
 
-      // 2. Validate data
+      // 3. Validate data
       const validation = reportSchema.safeParse({
         ...formData,
         location: { type: "Point", coordinates: location },
@@ -74,16 +101,17 @@ export default function ReportCrimePage() {
 
       const validatedData = validation.data;
 
-      // 3. Submit to API
+      // 4. Submit to API
       const response = await fetch("/api/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validatedData),
       });
 
+      const resultData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Submission failed");
+        throw new Error(resultData.error || "Submission failed");
       }
 
       toast.success("Report submitted successfully!", {
@@ -95,6 +123,7 @@ export default function ReportCrimePage() {
       setFormData({ type: "", description: "", isAnonymous: false });
       setFiles([]);
     } catch (err: any) {
+      console.error("Submit Error:", err);
       toast.error("Submission Error", {
         description: err.message || "An unexpected error occurred",
         icon: <AlertCircle className="w-5 h-5 text-destructive" />,
@@ -116,13 +145,22 @@ export default function ReportCrimePage() {
           <form onSubmit={handleSubmit} className="space-y-4 bg-card p-6 rounded-2xl border shadow-sm">
             <div className="space-y-2">
               <Label htmlFor="type">Crime Type</Label>
-              <Input 
-                id="type" 
-                placeholder="e.g. Robbery, Theft, Assault" 
+              <Select 
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
                 required
-              />
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Select crime type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CRIME_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -149,7 +187,20 @@ export default function ReportCrimePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Evidence (Images/Videos)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Evidence (Images/Videos)</Label>
+                {files.length > 0 && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearFiles}
+                    className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-col gap-4">
                 <div className="relative group">
                   <Input 
@@ -157,17 +208,45 @@ export default function ReportCrimePage() {
                     multiple 
                     onChange={handleFileChange} 
                     className="cursor-pointer p-2"
+                    accept="image/*,video/*"
                   />
                   <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
                     <Upload className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
+                
                 {files.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {files.map((f, i) => (
-                      <span key={i} className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-md flex items-center gap-1">
-                        {f.name.substring(0, 12)}...
-                      </span>
+                      <div key={i} className="relative aspect-square rounded-xl border bg-muted overflow-hidden group/file">
+                        {f.type.startsWith('image/') ? (
+                          <img 
+                            src={URL.createObjectURL(f)} 
+                            alt={f.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Upload className="w-8 h-8 text-muted-foreground opacity-50" />
+                          </div>
+                        )}
+                        
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/file:opacity-100 transition-opacity flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
+                            onClick={() => removeFile(i)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate">
+                          {f.name}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}

@@ -34,7 +34,7 @@ export const reportSchema = z.object({
     ]),
   }),
   isAnonymous: z.boolean().optional().default(false),
-  mediaUrls: z.array(z.string().url("Invalid media URL")).optional(),
+  mediaUrls: z.array(z.string()).optional(),
 });
 
 export type UserRegisterInput = z.infer<typeof userRegisterSchema>;
