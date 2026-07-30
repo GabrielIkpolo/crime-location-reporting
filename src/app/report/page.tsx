@@ -147,7 +147,7 @@ export default function ReportCrimePage() {
               <Label htmlFor="type">Crime Type</Label>
               <Select 
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                onValueChange={(value) => setFormData({ ...formData, type: value ?? "" })}
                 required
               >
                 <SelectTrigger id="type">
