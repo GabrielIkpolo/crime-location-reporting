@@ -24,6 +24,12 @@ export async function uploadMediaAction(formData: FormData) {
     'video/mp4', 'video/quicktime', 'video/webm'
   ];
 
+  // Check Cloudinary Config in Production
+  if (!isDev && (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET)) {
+    console.error("[STORAGE_ACTION] Cloudinary environment variables are missing in production!");
+    throw new Error("Cloudinary configuration error. Please contact the administrator.");
+  }
+
   for (const file of files) {
     // 1. Size Validation
     if (file.size > MAX_FILE_SIZE) {
@@ -39,21 +45,41 @@ export async function uploadMediaAction(formData: FormData) {
     
     if (isDev) {
       const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase()}`;
-      const filePath = path.join(process.cwd(), 'public/uploads', uniqueFileName);
-      await writeFile(filePath, buffer);
-      uploadedUrls.push(`/uploads/${uniqueFileName}`);
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      
+      try {
+        // Ensure directory exists
+        await fs.mkdir(uploadsDir, { recursive: true });
+        const filePath = path.join(uploadsDir, uniqueFileName);
+        await writeFile(filePath, buffer);
+        uploadedUrls.push(`/uploads/${uniqueFileName}`);
+      } catch (err: any) {
+        console.error("[STORAGE_ACTION] Local upload failed:", err);
+        throw new Error(`Local file storage failed: ${err.message}`);
+      }
     } else {
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { resource_type: 'auto', folder: 'crime_reports' },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-        uploadStream.end(buffer);
-      });
-      uploadedUrls.push((result as any).secure_url);
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { resource_type: 'auto', folder: 'crime_reports' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(buffer);
+        });
+        const uploadRes = result as any;
+        if (!uploadRes.secure_url) {
+          throw new Error("Cloudinary upload succeeded but no secure URL was returned.");
+        }
+        uploadedUrls.push(uploadRes.secure_url);
+      } catch (err: any) {
+        console.error("[STORAGE_ACTION] Cloudinary upload failed:", err);
+        // Provide a more helpful error message if it's a Cloudinary error
+        const errorMessage = err.message || (typeof err === 'string' ? err : "Unknown Cloudinary error");
+        throw new Error(`Media upload failed: ${errorMessage}`);
+      }
     }
   }
 
