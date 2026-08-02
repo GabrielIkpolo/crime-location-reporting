@@ -4,15 +4,17 @@ import prisma from "@/lib/prisma";
 import { reportSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limiter";
 import { haversineDistance } from "@/lib/geo-utils";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("[REPORTS_API] Received POST request");
+    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
+    logger.info({ ip: ipAddress }, "[REPORTS_API] Received POST request");
     
     // 1. Rate Limiting
-    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
     const rateLimit = checkRateLimit(ipAddress);
     if (!rateLimit.allowed) {
+      logger.warn({ ip: ipAddress }, "[REPORTS_API] Rate limit exceeded");
       return NextResponse.json({ error: "Too many reports. Please try again in an hour." }, { status: 429 });
     }
 
@@ -23,6 +25,7 @@ export async function POST(req: NextRequest) {
     const result = reportSchema.safeParse(body);
     if (!result.success) {
       const firstError = result.error.issues[0]?.message || "Invalid report data";
+      logger.warn({ error: firstError, body }, "[REPORTS_API] Validation failed");
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
     const validatedData = result.data;
@@ -31,7 +34,12 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get("user-agent") || "Unknown";
 
     // 4. Similarity Engine (Anti-Spam & Grouping)
-    const DISTANCE_THRESHOLD_KM = 0.2; // 200 meters
+    // Fetch dynamic settings
+    const settings = await prisma.systemSetting.findMany();
+    const settingsMap: { [key: string]: string } = {};
+    settings.forEach(s => settingsMap[s.key] = s.value);
+
+    const DISTANCE_THRESHOLD_KM = parseFloat(settingsMap.DISTANCE_THRESHOLD || "0.2"); 
     const TIME_THRESHOLD = 3 * 60 * 60 * 1000; 
     const threeHoursAgo = new Date(Date.now() - TIME_THRESHOLD);
 
@@ -53,7 +61,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (dist < DISTANCE_THRESHOLD_KM) {
-        console.log("[REPORTS_API] Similar report found. Incrementing confirmation count.");
+        logger.info({ reportId: existingReport.id }, "[REPORTS_API] Similar report found. Incrementing confirmation count.");
         const updatedReport = await prisma.report.update({
           where: { id: existingReport.id },
           data: { 
@@ -86,20 +94,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    logger.info({ reportId: report.id, type: report.type }, "[REPORTS_API] New report created");
     return NextResponse.json(report, { status: 201 });
   } catch (error: any) {
-    console.error("[REPORTS_API] ERROR:", error);
+    logger.error({ error: error.message }, "[REPORTS_API] ERROR");
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Data Decay: Only show reports from the last 30 days for public view
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Fetch dynamic settings
+    const settings = await prisma.systemSetting.findMany();
+    const settingsMap: { [key: string]: string } = {};
+    settings.forEach(s => settingsMap[s.key] = s.value);
 
-    // 1. Fetch verified reports from last 30 days
+    // Data Decay: Only show reports from the last N days for public view
+    const decayDays = parseInt(settingsMap.DECAY_DAYS || "30");
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - decayDays);
+
+    // 1. Fetch verified reports from last N days
     const verifiedReports = await prisma.report.findMany({
       where: { 
         status: "VERIFIED",
@@ -107,7 +122,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 2. Fetch pending reports from last 30 days for crowdsourced urgency
+    // 2. Fetch pending reports from last N days for crowdsourced urgency
     const pendingReports = await prisma.report.findMany({
       where: { 
         status: "PENDING",
@@ -118,8 +133,8 @@ export async function GET(req: NextRequest) {
     // 3. Spatial Clustering Logic for Pending Reports (Optimized)
     const crowdAlerts: any[] = [];
     const processedIds = new Set<string>();
-    const DISTANCE_THRESHOLD_KM = 0.5; // 500 meters
-    const COUNT_THRESHOLD = 5; 
+    const DISTANCE_THRESHOLD_KM = parseFloat(settingsMap.DISTANCE_THRESHOLD || "0.5"); 
+    const COUNT_THRESHOLD = parseInt(settingsMap.CROWD_THRESHOLD || "5"); 
 
     // Sort reports by latitude to allow for efficient neighbor searching
     const sortedReports = [...pendingReports].sort((a, b) => 
@@ -185,12 +200,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    logger.info({ verifiedCount: verifiedReports.length, crowdAlertsCount: crowdAlerts.length }, "[REPORTS_API] GET successful");
     return NextResponse.json({
       verified: verifiedReports,
       communityAlerts: crowdAlerts,
     });
   } catch (error: any) {
-    console.error("[REPORTS_API_GET] ERROR:", error);
+    logger.error({ error: error.message }, "[REPORTS_API_GET] ERROR");
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -61,8 +61,8 @@ model AdminLog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   admin     User     @relation(fields: [adminId], references: [id])
   adminId   String   @db.ObjectId
-  report    Report   @relation(fields: [reportId], references: [id])
-  reportId  String   @db.ObjectId
+  report    Report?  @relation(fields: [reportId], references: [id])
+  reportId  String?  @db.ObjectId
   action    String
   timestamp DateTime @default(now())
 }
