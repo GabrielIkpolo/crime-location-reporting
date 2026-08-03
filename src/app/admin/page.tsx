@@ -21,10 +21,10 @@ export default function AdminPage() {
       try {
         const res = await fetch("/api/admin/reports");
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setReports(data);
+        if (data && Array.isArray(data.reports)) {
+          setReports(data.reports);
         } else {
-          console.error("Expected array of reports, got:", data);
+          console.error("Expected object with reports array, got:", data);
         }
       } catch (err) {
         console.error("Failed to fetch reports", err);

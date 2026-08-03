@@ -17,6 +17,7 @@ export default function PublicMapPage() {
   const [communityAlerts, setCommunityAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, highRisk: 0, crowdAlerts: 0 });
+  const [mapCenter, setMapCenter] = useState<[number, number]>([3.3792, 6.5244]);
 
   useEffect(() => {
     async function fetchReports() {
@@ -58,7 +59,7 @@ export default function PublicMapPage() {
                 <div className="text-xs">
                   <span className="block font-bold text-sm">{stats.total}</span>
                   <span className="text-muted-foreground">Verified</span>
-                </div>
+                </div >
               </CardContent>
             </Card>
             <Card className="bg-orange-50 border-orange-200">
@@ -67,7 +68,7 @@ export default function PublicMapPage() {
                 <div className="text-xs">
                   <span className="block font-bold text-sm">{stats.crowdAlerts}</span>
                   <span className="text-muted-foreground">Crowd Alerts</span>
-                </div>
+                </div >
               </CardContent>
             </Card>
             <Card className="bg-destructive/5 border-destructive/20">
@@ -76,15 +77,15 @@ export default function PublicMapPage() {
                 <div className="text-xs">
                   <span className="block font-bold text-sm">{stats.highRisk}</span>
                   <span className="text-muted-foreground">High Risk</span>
-                </div>
+                </div >
               </CardContent>
             </Card>
             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-2 py-1">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               Live
             </Badge>
-          </div>
-        </div>
+          </div >
+        </div >
         
         <div className="flex-1 relative flex overflow-hidden">
           <div className="flex-1 relative">
@@ -92,15 +93,16 @@ export default function PublicMapPage() {
               <div className="h-full w-full flex flex-col items-center justify-center bg-muted gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
                 <p className="text-muted-foreground font-medium">Loading safety data...</p>
-              </div>
+              </div >
             ) : (
               <CrimeMap 
                 mode="view" 
                 reports={verifiedReports} 
                 communityAlerts={communityAlerts} 
+                center={mapCenter}
               />
             )}
-          </div>
+          </div >
 
           <div className="hidden lg:block w-80 bg-background border-l overflow-y-auto p-4 space-y-6">
             <section className="space-y-3">
@@ -113,23 +115,27 @@ export default function PublicMapPage() {
                   <p className="text-xs text-muted-foreground text-center py-4">No high-volume warnings.</p>
                 ) : (
                   communityAlerts.map((alert, i) => (
-                    <Card key={i} className="border-orange-200 bg-orange-50/50">
+                    <Card 
+                      key={i} 
+                      className="border-orange-200 bg-orange-50/50 cursor-pointer hover:border-orange-400 transition-colors"
+                      onClick={() => setMapCenter([alert.location.coordinates[1], alert.location.coordinates[0]])}
+                    >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex justify-between items-start">
                           <span className="font-bold text-sm text-orange-700">{alert.type}</span>
                           <Badge variant="outline" className="text-[10px] bg-white">Unverified</Badge>
-                        </div>
+                        </div >
                         <p className="text-xs text-muted-foreground">
                           {alert.description}
                         </p>
                         <div className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
                           <Users className="w-3 h-3" /> {alert.reportCount} reports
-                        </div>
+                        </div >
                       </CardContent>
                     </Card>
                   ))
                 )}
-              </div>
+              </div >
             </section>
 
             <section className="space-y-3 pt-4 border-t">
@@ -142,28 +148,32 @@ export default function PublicMapPage() {
                   <p className="text-xs text-muted-foreground text-center py-4">No verified reports.</p>
                 ) : (
                   verifiedReports.slice(0, 10).map((report, i) => (
-                    <Card key={i} className="hover:border-primary/50 transition-colors cursor-pointer">
+                    <Card 
+                      key={i} 
+                      className="hover:border-primary/50 transition-colors cursor-pointer"
+                      onClick={() => setMapCenter([report.location.coordinates[1], report.location.coordinates[0]])}
+                    >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex justify-between items-start">
                           <span className="font-bold text-sm">{report.type}</span>
                           <Badge variant="outline" className="text-[10px] h-5">{report.riskLevel}</Badge>
-                        </div>
+                        </div >
                         <p className="text-xs text-muted-foreground line-clamp-2">
                           {report.description}
                         </p>
                         <div className="text-[10px] text-muted-foreground flex justify-between">
                           <span>{new Date(report.createdAt).toLocaleDateString()}</span>
                           <span className="text-primary font-medium">Verified ✓</span>
-                        </div>
+                        </div >
                       </CardContent>
                     </Card>
                   ))
                 )}
-              </div>
+              </div >
             </section>
-          </div>
-        </div>
-      </div>
+          </div >
+        </div >
+      </div >
     </PageTransition>
   );
 }

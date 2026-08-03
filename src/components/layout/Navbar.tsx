@@ -17,6 +17,8 @@ export default function Navbar() {
     { name: "Report Crime", href: "/report", icon: MapPin },
   ];
 
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -38,6 +40,17 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
+          {isAdmin && (
+            <Link 
+              href="/admin"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              Admin Dashboard
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-3">

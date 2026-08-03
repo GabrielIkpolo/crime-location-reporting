@@ -34,6 +34,7 @@ L.Icon.Default.mergeOptions({
 interface CrimeMapProps {
   mode: "view" | "pick";
   initialPos?: [number, number];
+  center?: [number, number];
   onLocationSelect?: (pos: [number, number]) => void;
   reports?: any[];
   communityAlerts?: any[];
@@ -71,7 +72,7 @@ function LocateButton({ onLocationSelect }: { onLocationSelect?: (pos: [number, 
       <Button onClick={handleLocate} className="rounded-full w-12 h-12 p-0 shadow-xl bg-background text-foreground hover:bg-accent">
         <MapPin className="w-6 h-6" />
       </Button>
-    </div>
+    </div >
   );
 }
 
@@ -117,7 +118,7 @@ function CommunityAlertLayer({ alerts }: { alerts: any[] }) {
           <p class="text-xs font-medium">${sanitizeHTML(alert.type)}</p>
           <p class="text-[10px] text-muted-foreground mt-1">
             Reported by ${alert.reportCount} citizens. <br/>
-            <span className="italic">Awaiting official verification.</span>
+            <span class="italic">Awaiting official verification.</span>
           </p>
         </div>
       `);
@@ -130,8 +131,14 @@ function CommunityAlertLayer({ alerts }: { alerts: any[] }) {
   return null;
 }
 
-export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], onLocationSelect, reports = [], communityAlerts = [] }: CrimeMapProps) {
+export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, onLocationSelect, reports = [], communityAlerts = [] }: CrimeMapProps) {
   const [position, setPosition] = useState<[number, number]>(initialPos);
+
+  useEffect(() => {
+    if (center) {
+      setPosition(center);
+    }
+  }, [center]);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -170,6 +177,6 @@ export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], onLocati
           </>
         )}
       </MapContainer>
-    </div>
+    </div >
   );
 }
