@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Loader2, Check, X, Eye } from "lucide-react";
+import { Loader2, Check, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ReportDetailsDialog } from "@/components/admin/ReportDetailsDialog";
 
@@ -17,15 +17,22 @@ export default function ReportsQueuePage() {
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
+
   useEffect(() => {
     async function fetchReports() {
+      setLoading(true);
       try {
-        const res = await fetch("/api/admin/reports");
+        const res = await fetch(`/api/admin/reports?page=${currentPage}&limit=${itemsPerPage}`);
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setReports(data);
+        if (data && Array.isArray(data.reports)) {
+          setReports(data.reports);
+          setTotalPages(data.totalPages);
         } else {
-          console.error("Expected array of reports, got:", data);
+          console.error("Expected object with reports array, got:", data);
         }
       } catch (err) {
         console.error("Failed to fetch reports", err);
@@ -34,7 +41,7 @@ export default function ReportsQueuePage() {
       }
     }
     fetchReports();
-  }, []);
+  }, [currentPage]);
 
   async function updateStatus(id: string, status: string, riskLevel: string) {
     setUpdatingId(id);
@@ -76,6 +83,7 @@ export default function ReportsQueuePage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Date</TableHead>
                 <TableHead>Crime Type</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Location</TableHead>
@@ -87,20 +95,23 @@ export default function ReportsQueuePage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">
+                  <TableCell colSpan={7} className="text-center py-10">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading reports...
                   </TableCell>
                 </TableRow>
               ) : reports.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     No reports found.
                   </TableCell>
                 </TableRow>
               ) : (
                 reports.map((report: any) => (
                   <TableRow key={report.id}>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(report.createdAt).toLocaleString()}
+                    </TableCell>
                     <TableCell className="font-medium">{report.type}</TableCell>
                     <TableCell className="max-w-xs truncate">{report.description}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
@@ -168,6 +179,33 @@ export default function ReportsQueuePage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between px-2">
+        <p className="text-sm text-muted-foreground">
+          Showing page {currentPage} of {totalPages}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1 || loading}
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || loading}
+          >
+            Next
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </div>
 
       <ReportDetailsDialog 
         report={selectedReport} 

@@ -10,11 +10,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const reports = await prisma.report.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json(reports);
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.report.count(),
+    ]);
+
+    return NextResponse.json({
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
