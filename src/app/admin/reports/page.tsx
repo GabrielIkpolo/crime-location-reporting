@@ -6,13 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { ReportDetailsDialog } from "@/components/admin/ReportDetailsDialog";
 
 export default function ReportsQueuePage() {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     async function fetchReports() {
@@ -54,14 +57,19 @@ export default function ReportsQueuePage() {
     }
   }
 
+  const handleViewReport = (report: any) => {
+    setSelectedReport(report);
+    setIsDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold">Verification Queue</h1>
           <p className="text-muted-foreground">Review and validate incoming crime reports.</p>
-        </div>
-      </div>
+        </div >
+      </div >
 
       <Card>
         <CardContent className="p-0">
@@ -117,6 +125,14 @@ export default function ReportsQueuePage() {
                         size="sm" 
                         variant="outline" 
                         className="h-8 w-8 p-0"
+                        onClick={() => handleViewReport(report)}
+                      >
+                        <Eye className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 w-8 p-0"
                         onClick={() => updateStatus(report.id, "VERIFIED", report.riskLevel)}
                         disabled={updatingId === report.id}
                       >
@@ -152,6 +168,15 @@ export default function ReportsQueuePage() {
           </Table>
         </CardContent>
       </Card>
+
+      <ReportDetailsDialog 
+        report={selectedReport} 
+        isOpen={isDialogOpen} 
+        onClose={() => {
+          setIsDialogOpen(false);
+          setSelectedReport(null);
+        }}
+      />
     </div >
   );
 }

@@ -7,9 +7,30 @@ import bcrypt from "bcryptjs";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
-  // Callbacks are now handled in authConfig to support Middleware
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user }) {
+      if (user.id) {
+        const sessions = await prisma.session.findMany({
+          where: { userId: user.id },
+          orderBy: { expires: "asc" },
+        });
+
+        if (sessions.length >= 3) {
+          // Delete the oldest session to make room for the new one
+          // This ensures the user is limited to 3 devices/sessions
+          await prisma.session.delete({
+            where: { id: sessions[0].id },
+          });
+        }
+      }
+      return true;
+    },
+  },
   providers: [
-    ...authConfig.providers.filter(p => p.id !== "credentials"),
+    // Spread all providers from authConfig (like Google)
+    ...authConfig.providers.filter((p) => p.id !== "credentials"),
+    // Override Credentials provider with the real implementation
     {
       id: "credentials",
       name: "Credentials",
@@ -19,25 +40,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          return null;
+        }
 
-        const isPasswordCorrect = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+        const isValid = await bcrypt.compare(credentials.password as string, user.password);
 
-        if (!isPasswordCorrect) return null;
+        if (!isValid) {
+          return null;
+        }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          image: user.image,
           role: user.role,
         };
       },
