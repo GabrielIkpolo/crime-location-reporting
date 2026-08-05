@@ -13,7 +13,7 @@ cloudinary.config({
 
 export async function uploadMediaAction(formData: FormData) {
   const files = formData.getAll('files') as File[];
-  const uploadedUrls = [];
+  const uploadedUrls: string[] = [];
 
   const isDev = process.env.NODE_ENV === 'development';
   
@@ -53,13 +53,14 @@ export async function uploadMediaAction(formData: FormData) {
         const filePath = path.join(uploadsDir, uniqueFileName);
         await writeFile(filePath, buffer);
         uploadedUrls.push(`/uploads/${uniqueFileName}`);
-      } catch (err: any) {
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
         console.error("[STORAGE_ACTION] Local upload failed:", err);
-        throw new Error(`Local file storage failed: ${err.message}`);
+        throw new Error(`Local file storage failed: ${errorMessage}`);
       }
     } else {
       try {
-        const result = await new Promise((resolve, reject) => {
+        const result = await new Promise<unknown>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { resource_type: 'auto', folder: 'crime_reports' },
             (error, result) => {
@@ -69,15 +70,16 @@ export async function uploadMediaAction(formData: FormData) {
           );
           uploadStream.end(buffer);
         });
-        const uploadRes = result as any;
+
+        const uploadRes = result as { secure_url: string };
         if (!uploadRes.secure_url) {
           throw new Error("Cloudinary upload succeeded but no secure URL was returned.");
         }
         uploadedUrls.push(uploadRes.secure_url);
-      } catch (err: any) {
+      } catch (err) {
         console.error("[STORAGE_ACTION] Cloudinary upload failed:", err);
         // Provide a more helpful error message if it's a Cloudinary error
-        const errorMessage = err.message || (typeof err === 'string' ? err : "Unknown Cloudinary error");
+        const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : "Unknown Cloudinary error");
         throw new Error(`Media upload failed: ${errorMessage}`);
       }
     }

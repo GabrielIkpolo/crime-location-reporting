@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileText, CheckCircle, Clock, XCircle } from "lucide-react";
 import { PageTransition } from "@/components/ui/PageTransition";
+import { Report } from "@/types";
 
 export default function MyReportsPage() {
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function MyReportsPage() {
     fetchMyReports();
   }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Report["status"]) => {
     switch (status) {
       case "VERIFIED":
         return <Badge className="bg-green-500 text-white flex gap-1"><CheckCircle className="w-3 h-3" /> Verified</Badge>;
@@ -44,7 +45,7 @@ export default function MyReportsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Incident Reports</h1>
           <p className="text-muted-foreground">Track the verification status of your submissions.</p>
-        </div>
+        </div >
 
         <Card>
           <CardContent className="p-0">
@@ -69,11 +70,11 @@ export default function MyReportsPage() {
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-20 text-muted-foreground">
                       <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                      <p>You haven't submitted any reports yet.</p>
+                      <p>You haven&apos;t submitted any reports yet.</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  reports.map((report: any) => (
+                  reports.map((report) => (
                     <TableRow key={report.id}>
                       <TableCell className="font-medium">{report.type}</TableCell>
                       <TableCell>{new Date(report.createdAt).toLocaleDateString()}</TableCell>
@@ -94,7 +95,7 @@ export default function MyReportsPage() {
             </Table>
           </CardContent>
         </Card>
-      </div>
+      </div >
     </PageTransition>
   );
 }

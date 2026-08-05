@@ -20,8 +20,10 @@ export default function ContactPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success("Message sent successfully!");
-    } catch (err: any) {
-      toast.error("Failed to send message");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[Contact] Unexpected error:", err);
+      toast.error("Failed to send message", { description: message });
     } finally {
       setLoading(false);
     }

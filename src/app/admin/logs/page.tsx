@@ -2,9 +2,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { AdminLog } from "@/types";
 
 export default function AdminLogsPage() {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,7 +13,11 @@ export default function AdminLogsPage() {
       try {
         const res = await fetch("/api/admin/logs");
         const data = await res.json();
-        setLogs(data);
+        if (Array.isArray(data)) {
+          setLogs(data);
+        } else if (data && Array.isArray(data.logs)) {
+          setLogs(data.logs);
+        }
       } catch (err) {
         console.error("Failed to fetch logs", err);
       } finally {
@@ -54,9 +59,11 @@ export default function AdminLogsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              logs.map((log: any) => (
+              logs.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="font-medium">{log.admin.name || log.admin.email}</TableCell>
+                  <TableCell className="font-medium">
+                    {log.admin ? (log.admin.name || log.admin.email || "Unknown Admin") : "System"}
+                  </TableCell>
                   <TableCell>{log.action}</TableCell>
                   <TableCell className="font-mono text-xs">
                     {log.reportId ? `Report: ${log.reportId}` : "System/User Action"}

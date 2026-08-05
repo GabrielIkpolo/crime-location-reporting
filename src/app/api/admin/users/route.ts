@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { logAdminAction } from "@/lib/admin-logger";
+import { updateUserRoleSchema } from "@/lib/validations-admin";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session || !session.user || (session.user as any).role !== "ADMIN") {
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -37,19 +38,29 @@ export async function GET(req: NextRequest) {
       page,
       totalPages: Math.ceil(total / limit),
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
-  if (!session || !session.user || (session.user as any).role !== "ADMIN") {
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
-    const { userId, role } = await req.json();
+    const body = await req.json();
+
+    // Validate input with zod
+    const validation = updateUserRoleSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0]?.message || "Invalid user update data";
+      return NextResponse.json({ error: firstError }, { status: 400 });
+    }
+
+    const { userId, role } = validation.data;
     
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -64,20 +75,21 @@ export async function PATCH(req: NextRequest) {
 
     // Log the role change
     await logAdminAction({
-      adminId: session.user.id as string,
+      adminId: session.user.id,
       action: `Updated user role to ${role}`,
       targetId: userId
     });
 
     return NextResponse.json(updatedUser);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   const session = await auth();
-  if (!session || !session.user || (session.user as any).role !== "ADMIN") {
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -86,6 +98,12 @@ export async function DELETE(req: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+  }
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 });
   }
 
   try {
@@ -100,13 +118,14 @@ export async function DELETE(req: NextRequest) {
 
     // Log the deletion
     await logAdminAction({
-      adminId: session.user.id as string,
+      adminId: session.user.id,
       action: `Deleted user`,
       targetId: userId
     });
 
     return NextResponse.json({ message: "User deleted successfully" });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 }

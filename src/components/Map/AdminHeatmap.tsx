@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.heat";
+import { Report } from "@/types";
 
 interface AdminHeatmapProps {
-  reports: any[];
+  reports: Report[];
 }
 
-function HeatLayer({ reports }: { reports: any[] }) {
+function HeatLayer({ reports }: { reports: Report[] }) {
   const map = useMap();
 
   useEffect(() => {
@@ -18,11 +19,11 @@ function HeatLayer({ reports }: { reports: any[] }) {
     // Prepare data for leaflet.heat: [[lat, lng, intensity], ...]
     const heatData = reports.map((r) => [
       r.location.coordinates[1], // lat
-      r.location.coordinates[0], // lng,
+      r.location.coordinates[0], // lng
       r.riskLevel === "HIGH" ? 1.0 : r.riskLevel === "MEDIUM" ? 0.5 : 0.2,
     ]);
 
-    const heatLayer = (L as any).heatLayer(heatData, {
+    const heatLayer = ((L as unknown as { heatLayer: (data: number[][], options?: Record<string, unknown>) => L.Layer }).heatLayer)(heatData, {
       radius: 25,
       blur: 15,
       maxZoom: 17,

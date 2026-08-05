@@ -18,7 +18,7 @@ A professional, real-time public safety ecosystem allowing citizens to report cr
 - **Audit Logging**: Full transparency of all administrative actions.
 
 ## Technical Stack
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16.2.10 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS & Shadcn UI
 - **Database**: MongoDB via Prisma ORM

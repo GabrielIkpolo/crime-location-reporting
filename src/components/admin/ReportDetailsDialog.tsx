@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +12,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Calendar, AlertCircle, Info } from "lucide-react";
+import { Report } from "@/types";
 
 interface ReportDetailsDialogProps {
-  report: any;
+  report: Report | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -47,14 +49,14 @@ export function ReportDetailsDialog({
               <DialogDescription className="text-base">
                 Report ID: <span className="font-mono text-xs">{report.id}</span>
               </DialogDescription>
-            </div>
+            </div >
             <Badge 
               variant={report.status === "VERIFIED" ? "default" : "secondary"}
               className="text-sm"
             >
               {report.status}
             </Badge>
-          </div>
+          </div >
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-2">
@@ -63,7 +65,7 @@ export function ReportDetailsDialog({
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-primary" />
               <h3 className="text-lg font-semibold">Incident Details</h3>
-            </div>
+            </div >
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -75,15 +77,15 @@ export function ReportDetailsDialog({
                 }>
                   {report.riskLevel}
                 </Badge>
-              </div>
+              </div >
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase font-medium">Reported At</p>
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   {new Date(report.createdAt).toLocaleString()}
-                </div>
-              </div>
-            </div>
+                </div >
+              </div >
+            </div >
 
             <Separator />
 
@@ -92,15 +94,15 @@ export function ReportDetailsDialog({
               <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
                 {report.description}
               </p>
-            </div>
+            </div >
 
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase font-medium">Location</p>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span>{report.location.coordinates[1].toFixed(6)}, {report.location.coordinates[0].toFixed(6)}</span>
-              </div>
-            </div>
+                <span>{report.location.coordinates[1].toFixed(6)}, {report.location.coordinates[0].toFixed(6)}</span >
+              </div >
+            </div >
 
             <Separator />
 
@@ -109,12 +111,12 @@ export function ReportDetailsDialog({
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-primary" />
                 <h3 className="text-lg font-semibold">Attached Media</h3>
-              </div>
+              </div >
               
               {report.mediaUrls && report.mediaUrls.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {report.mediaUrls.map((url: string, index: number) => (
-                    <div key={index} className="rounded-lg overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center">
+                  {report.mediaUrls.map((url, index) => (
+                    <div key={index} className="rounded-lg overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center relative">
                       {isVideo(url) ? (
                         <video 
                           src={url} 
@@ -122,23 +124,24 @@ export function ReportDetailsDialog({
                           className="w-full h-full object-cover"
                         />
                       ) : isImage(url) ? (
-                        <img 
+                        <Image 
                           src={url} 
                           alt={`Report media ${index + 1}`} 
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       ) : (
-                        <div className="text-xs text-muted-foreground">Unsupported media type</div>
+                        <div className="text-xs text-muted-foreground">Unsupported media type</div >
                       )}
-                    </div>
+                    </div >
                   ))}
-                </div>
+                </div >
               ) : (
                 <p className="text-sm text-muted-foreground italic">No media attached to this report.</p>
               )}
-            </div>
-          </div>
-        </div>
+            </div >
+          </div >
+        </div >
       </DialogContent>
     </Dialog>
   );

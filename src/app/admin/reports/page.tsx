@@ -9,12 +9,13 @@ import { useState, useEffect } from "react";
 import { Loader2, Check, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ReportDetailsDialog } from "@/components/admin/ReportDetailsDialog";
+import { Report } from "@/types";
 
 export default function ReportsQueuePage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Pagination state
@@ -43,7 +44,7 @@ export default function ReportsQueuePage() {
     fetchReports();
   }, [currentPage]);
 
-  async function updateStatus(id: string, status: string, riskLevel: string) {
+  async function updateStatus(id: string, status: Report["status"], riskLevel: Report["riskLevel"]) {
     setUpdatingId(id);
     try {
       const res = await fetch(`/api/reports/${id}`, {
@@ -55,16 +56,17 @@ export default function ReportsQueuePage() {
       if (!res.ok) throw new Error("Update failed");
       
       // Optimistic update
-      setReports(prev => prev.map(r => r.id === id ? { ...r, status, riskLevel } : r));
+      setReports(prev => prev.map(r => r.id === id ? { ...r, status, riskLevel } : r) as Report[]);
       toast.success("Report updated successfully");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Update failed";
+      toast.error(message);
     } finally {
       setUpdatingId(null);
     }
   }
 
-  const handleViewReport = (report: any) => {
+  const handleViewReport = (report: Report) => {
     setSelectedReport(report);
     setIsDialogOpen(true);
   };
@@ -75,8 +77,8 @@ export default function ReportsQueuePage() {
         <div>
           <h1 className="text-3xl font-bold">Verification Queue</h1>
           <p className="text-muted-foreground">Review and validate incoming crime reports.</p>
-        </div >
-      </div >
+        </div>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -107,7 +109,7 @@ export default function ReportsQueuePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                reports.map((report: any) => (
+                reports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(report.createdAt).toLocaleString()}
@@ -160,7 +162,7 @@ export default function ReportsQueuePage() {
                       </Button>
                       <Select 
                         defaultValue={report.riskLevel} 
-                        onValueChange={(val) => updateStatus(report.id, report.status, val)}
+                        onValueChange={(val) => updateStatus(report.id, report.status, val as Report["riskLevel"])}
                       >
                         <SelectTrigger className="w-[110px] h-8">
                           <SelectValue placeholder="Risk" />
@@ -215,6 +217,6 @@ export default function ReportsQueuePage() {
           setSelectedReport(null);
         }}
       />
-    </div >
+    </div>
   );
 }

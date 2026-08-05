@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,10 @@ export default function SettingsPage() {
       // For now, we simulate the success
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success("Profile updated successfully!");
-    } catch (err: any) {
-      toast.error("Failed to update profile");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[Settings] Unexpected error:", err);
+      toast.error("Failed to update profile", { description: message });
     } finally {
       setLoading(false);
     }

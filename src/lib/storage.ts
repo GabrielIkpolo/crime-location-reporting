@@ -15,7 +15,7 @@ export interface UploadResponse {
   publicId?: string;
 }
 
-export async function uploadMedia(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<UploadResponse> {
+export async function uploadMedia(fileBuffer: Buffer, fileName: string): Promise<UploadResponse> {
   const isDev = process.env.NODE_ENV === 'development';
 
   if (isDev) {

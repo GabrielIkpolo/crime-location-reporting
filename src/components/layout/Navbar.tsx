@@ -1,15 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldAlert, MapPin, Eye, User } from "lucide-react";
+import { ShieldAlert, MapPin, Eye, User, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { UserRole } from "@/types";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { data: session } = useSession();
 
   const navLinks = [
@@ -17,16 +19,17 @@ export default function Navbar() {
     { name: "Report Crime", href: "/report", icon: MapPin },
   ];
 
-  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const isAdmin = (session?.user?.role as UserRole) === "ADMIN";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl" onClick={() => setIsMobileMenuOpen(false)}>
           <ShieldAlert className="w-6 h-6 text-primary" />
           <span>CrimeReport</span>
         </Link>
 
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link 
@@ -55,7 +58,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           {session ? (
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               <Link 
                 href="/my-reports" 
                 className={cn(
@@ -65,14 +68,14 @@ export default function Navbar() {
               >
                 My Reports
               </Link>
-              <div className="hidden sm:flex items-center gap-2 text-sm font-medium">
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <User className="w-4 h-4" />
                 <span>{session.user?.name}</span>
-              </div>
+              </div >
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 Logout
               </Button>
-            </div>
+            </div >
           ) : (
             <Link href="/login">
               <Button variant="default" size="sm">
@@ -80,8 +83,78 @@ export default function Navbar() {
               </Button>
             </Link>
           )}
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden p-2 hover:bg-muted rounded-md transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <Menu className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+        </div >
+      </div >
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t bg-background">
+          <nav className="container mx-auto px-4 py-4 space-y-3">
+            {navLinks.map((link) => (
+              <Link 
+                key={link.href} 
+                href={link.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-2",
+                  pathname === link.href ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {link.icon && <link.icon className="w-4 h-4" />}
+                {link.name}
+              </Link>
+            ))}
+            {isAdmin && (
+              <Link 
+                href="/admin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-2",
+                  pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Admin Dashboard
+              </Link>
+            )}
+            {session && (
+              <>
+                <div className="border-t my-2" />
+                <Link 
+                  href="/my-reports" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-2",
+                    pathname === "/my-reports" ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  <User className="w-4 h-4" />
+                  My Reports
+                </Link>
+                <div className="flex items-center gap-2 text-sm font-medium py-2">
+                  <User className="w-4 h-4" />
+                  <span>{session.user?.name}</span>
+                </div >
+                <Button variant="ghost" size="sm" onClick={() => signOut()} className="w-full justify-start">
+                  Logout
+                </Button>
+              </>
+            )}
+          </nav>
         </div>
-      </div>
+      )}
     </header>
   );
 }

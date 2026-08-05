@@ -26,33 +26,33 @@ enum RiskLevel {
 }
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
   email         String?    @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole  @default(USER)
+  role          UserRole   @default(USER)
   accounts      Account[]
   sessions      Session[]
   reports       Report[]
   adminLogs     AdminLog[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Account {
-  id                 String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String  @db.ObjectId
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String? @db.String
-  access_token       String? @db.String
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.String
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -69,31 +69,31 @@ model Session {
 }
 
 model VerificationToken {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  identifier  String
-  token       String   @unique
-  expires     DateTime
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
   @@unique([identifier, token])
 }
 
 model Report {
-  id            String       @id @default(auto()) @map("_id") @db.ObjectId
-  type          String
-  description   String
-  status        ReportStatus @default(PENDING)
-  riskLevel     RiskLevel    @default(LOW)
-  location      Json         // Stores GeoJSON { type: "Point", coordinates: [lng, lat] }
-  mediaUrls     String[]
-  isAnonymous   Boolean      @default(false)
-  ipAddress     String?
-  userAgent     String?
-  confirmationCount Int      @default(1)
-  reporter      User?        @relation(fields: [reporterId], references: [id])
-  reporterId    String?      @db.ObjectId
-  adminLogs     AdminLog[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                String       @id @default(auto()) @map("_id") @db.ObjectId
+  type              String
+  description       String
+  status            ReportStatus @default(PENDING)
+  riskLevel         RiskLevel    @default(LOW)
+  location          Json // Stores GeoJSON { type: "Point", coordinates: [lng, lat] }
+  mediaUrls         String[]
+  isAnonymous       Boolean      @default(false)
+  ipAddress         String?
+  userAgent         String?
+  confirmationCount Int          @default(1)
+  reporter          User?        @relation(fields: [reporterId], references: [id])
+  reporterId        String?      @db.ObjectId
+  adminLogs         AdminLog[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
 
 model AdminLog {

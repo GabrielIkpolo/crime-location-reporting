@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -122,10 +122,11 @@ export default function ReportCrimePage() {
       // Reset form
       setFormData({ type: "", description: "", isAnonymous: false });
       setFiles([]);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
       console.error("Submit Error:", err);
       toast.error("Submission Error", {
-        description: err.message || "An unexpected error occurred",
+        description: message,
         icon: <AlertCircle className="w-5 h-5 text-destructive" />,
       });
     } finally {
@@ -220,10 +221,12 @@ export default function ReportCrimePage() {
                     {files.map((f, i) => (
                       <div key={i} className="relative aspect-square rounded-xl border bg-muted overflow-hidden group/file">
                         {f.type.startsWith('image/') ? (
-                          <img 
-                            src={URL.createObjectURL(f)} 
-                            alt={f.name} 
-                            className="w-full h-full object-cover"
+                          <Image
+                            src={URL.createObjectURL(f)}
+                            alt={f.name}
+                            fill
+                            className="object-cover"
+                            style={{ objectFit: 'cover' }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

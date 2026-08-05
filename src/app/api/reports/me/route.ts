@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
   
   if (!session || !session.user) {
@@ -10,13 +10,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
     const reports = await prisma.report.findMany({
       where: { reporterId: userId },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(reports);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

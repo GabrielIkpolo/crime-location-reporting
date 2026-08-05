@@ -1,4 +1,5 @@
 import prisma from "./prisma";
+import { Prisma } from "@prisma/client";
 
 export async function logAdminAction({
   adminId,
@@ -12,12 +13,12 @@ export async function logAdminAction({
   targetId?: string;
 }) {
   try {
-    const data: any = {
-      adminId,
+    const data: Prisma.AdminLogCreateInput = {
+      admin: { connect: { id: adminId } },
       action: `${action} ${targetId ? `(Target ID: ${targetId})` : ""}`,
     };
     if (reportId) {
-      data.reportId = reportId;
+      data.report = { connect: { id: reportId } };
     }
     await prisma.adminLog.create({ data });
   } catch (error) {

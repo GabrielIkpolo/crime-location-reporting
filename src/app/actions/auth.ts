@@ -1,9 +1,6 @@
-"use server";
-
+import { z } from "zod";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { reportSchema } from "@/lib/validations"; 
-import { z } from "zod";
 
 // Simple registration schema
 const registerSchema = z.object({
@@ -12,7 +9,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export async function registerUserAction(formData: any) {
+export async function registerUserAction(formData: unknown) {
   try {
     // Validate input
     const validated = registerSchema.parse(formData);
@@ -40,7 +37,8 @@ export async function registerUserAction(formData: any) {
     });
 
     return { success: true, user: { name: user.name, email: user.email } };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Registration failed" };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Registration failed";
+    return { success: false, error: errorMessage };
   }
 }

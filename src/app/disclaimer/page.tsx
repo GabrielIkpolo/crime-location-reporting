@@ -26,7 +26,7 @@ export default function DisclaimerPage() {
               </div>
               <p className="text-sm leading-relaxed">
                 <strong>Crime Location Reporting System is NOT an emergency response tool.</strong><br />
-                If you are in immediate danger, witnessing a crime in progress, or require urgent medical assistance, 
+                If you are in immediate danger, witnessing a crime in progress, or require urgent medical assistance,
                 do NOT use this app. Please contact your local emergency services (e.g., 911, 112, 999) immediately.
               </p>
             </CardContent>
@@ -39,7 +39,7 @@ export default function DisclaimerPage() {
               </h3>
               <p>
                 The reports displayed on the Public Safety Map are crowdsourced. While we implement verification 
-                processes and "Community Alerts" to signal high-volume reports, we cannot guarantee the 
+                processes and &quot;Community Alerts&quot; to signal high-volume reports, we cannot guarantee the 
                 absolute accuracy, timeliness, or authenticity of any specific report.
               </p>
             </section>

@@ -5,6 +5,7 @@ import { reportSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limiter";
 import { haversineDistance } from "@/lib/geo-utils";
 import logger from "@/lib/logger";
+import { GeoJSONPoint, CommunityAlert } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,11 +52,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (existingReport) {
-      const coords = (existingReport.location as any).coordinates;
+    if (existingReport && existingReport.location) {
+      const coords = existingReport.location as unknown as GeoJSONPoint;
       const dist = haversineDistance(
-        coords[1], // lat
-        coords[0], // lng
+        coords.coordinates[1], // lat
+        coords.coordinates[0], // lng
         validatedData.location.coordinates[1], // lat
         validatedData.location.coordinates[0]  // lng
       );
@@ -69,8 +70,8 @@ export async function POST(req: NextRequest) {
             location: {
               type: "Point",
               coordinates: [
-                (coords[0] + validatedData.location.coordinates[0]) / 2,
-                (coords[1] + validatedData.location.coordinates[1]) / 2,
+                (coords.coordinates[0] + validatedData.location.coordinates[0]) / 2,
+                (coords.coordinates[1] + validatedData.location.coordinates[1]) / 2,
               ]
             }
           },
@@ -96,13 +97,14 @@ export async function POST(req: NextRequest) {
 
     logger.info({ reportId: report.id, type: report.type }, "[REPORTS_API] New report created");
     return NextResponse.json(report, { status: 201 });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "[REPORTS_API] ERROR");
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: errorMessage }, "[REPORTS_API] ERROR");
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Fetch dynamic settings
     const settings = await prisma.systemSetting.findMany();
@@ -131,21 +133,23 @@ export async function GET(req: NextRequest) {
     });
 
     // 3. Spatial Clustering Logic for Pending Reports (Optimized)
-    const crowdAlerts: any[] = [];
+    const crowdAlerts: CommunityAlert[] = [];
     const processedIds = new Set<string>();
     const DISTANCE_THRESHOLD_KM = parseFloat(settingsMap.DISTANCE_THRESHOLD || "0.5"); 
     const COUNT_THRESHOLD = parseInt(settingsMap.CROWD_THRESHOLD || "5"); 
 
     // Sort reports by latitude to allow for efficient neighbor searching
-    const sortedReports = [...pendingReports].sort((a, b) => 
-      (a.location as any).coordinates[1] - (b.location as any).coordinates[1]
-    );
+    const sortedReports = [...pendingReports].sort((a, b) => {
+      const aLoc = a.location as unknown as GeoJSONPoint;
+      const bLoc = b.location as unknown as GeoJSONPoint;
+      return aLoc.coordinates[1] - bLoc.coordinates[1];
+    });
 
     for (let i = 0; i < sortedReports.length; i++) {
       const report = sortedReports[i];
       if (processedIds.has(report.id)) continue;
 
-      const reportLoc = report.location as any;
+      const reportLoc = report.location as unknown as GeoJSONPoint;
       if (!reportLoc || !reportLoc.coordinates) continue;
 
       const currentLat = reportLoc.coordinates[1];
@@ -158,7 +162,7 @@ export async function GET(req: NextRequest) {
         const other = sortedReports[j];
         if (processedIds.has(other.id)) continue;
         
-        const otherLoc = other.location as any;
+        const otherLoc = other.location as unknown as GeoJSONPoint;
         if (!otherLoc || !otherLoc.coordinates) continue;
 
         // Since it's sorted by latitude, if the difference is too large, 
@@ -182,8 +186,8 @@ export async function GET(req: NextRequest) {
       // Include the report itself in the cluster check
       if (cluster.length + 1 >= COUNT_THRESHOLD) {
         const allInCluster = [report, ...cluster];
-        const avgLng = allInCluster.reduce((sum, r) => sum + (r.location as any).coordinates[0], 0) / allInCluster.length;
-        const avgLat = allInCluster.reduce((sum, r) => sum + (r.location as any).coordinates[1], 0) / allInCluster.length;
+        const avgLng = allInCluster.reduce((sum, r) => sum + (r.location as unknown as GeoJSONPoint).coordinates[0], 0) / allInCluster.length;
+        const avgLat = allInCluster.reduce((sum, r) => sum + (r.location as unknown as GeoJSONPoint).coordinates[1], 0) / allInCluster.length;
         
         crowdAlerts.push({
           id: `crowd-${Math.random().toString(36).substr(2, 9)}`,
@@ -205,8 +209,9 @@ export async function GET(req: NextRequest) {
       verified: verifiedReports,
       communityAlerts: crowdAlerts,
     });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "[REPORTS_API_GET] ERROR");
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: errorMessage }, "[REPORTS_API_GET] ERROR");
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -45,8 +45,10 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (err: any) {
-      toast.error("An unexpected error occurred");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[Login] Unexpected error:", err);
+      toast.error("Login failed", { description: message });
     } finally {
       setLoading(false);
     }

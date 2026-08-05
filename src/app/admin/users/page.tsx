@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { Loader2, UserCog, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { User, UserRole } from "@/types";
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export default function UserManagementPage() {
     fetchUsers();
   }, [currentPage]);
 
-  async function updateRole(userId: string, role: string) {
+  async function updateRole(userId: string, role: UserRole) {
     setUpdatingId(userId);
     try {
       const res = await fetch("/api/admin/users", {
@@ -48,10 +49,11 @@ export default function UserManagementPage() {
         body: JSON.stringify({ userId, role }),
       });
       if (!res.ok) throw new Error("Update failed");
-      setUsers(prev => prev.map((u: any) => u.id === userId ? { ...u, role } : u));
+      setUsers(prev => prev.map((u) => u.id === userId ? { ...u, role } : u));
       toast.success("User role updated");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Update failed";
+      toast.error(message);
     } finally {
       setUpdatingId(null);
     }
@@ -66,10 +68,11 @@ export default function UserManagementPage() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Delete failed");
-      setUsers(prev => prev.filter((u: any) => u.id !== userId));
+      setUsers(prev => prev.filter((u) => u.id !== userId));
       toast.success("User deleted successfully");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Delete failed";
+      toast.error(message);
     } finally {
       setDeletingId(null);
     }
@@ -80,7 +83,7 @@ export default function UserManagementPage() {
       <div>
         <h1 className="text-3xl font-bold">User Management</h1>
         <p className="text-muted-foreground">Manage system access and user roles.</p>
-      </div>
+      </div >
 
       <div className="bg-card rounded-xl border p-6 space-y-4">
         <Table>
@@ -107,7 +110,7 @@ export default function UserManagementPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user: any) => (
+              users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name || "Anonymous User"}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -119,7 +122,7 @@ export default function UserManagementPage() {
                   <TableCell className="text-right flex justify-end items-center gap-2">
                     <Select 
                       defaultValue={user.role} 
-                      onValueChange={(val) => updateRole(user.id, val)}
+                      onValueChange={(val) => updateRole(user.id, val as UserRole)}
                       disabled={updatingId === user.id || deletingId === user.id}
                     >
                       <SelectTrigger className="w-[120px]">
@@ -146,7 +149,7 @@ export default function UserManagementPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </div >
 
       {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2">
@@ -172,8 +175,8 @@ export default function UserManagementPage() {
             Next
             <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 }

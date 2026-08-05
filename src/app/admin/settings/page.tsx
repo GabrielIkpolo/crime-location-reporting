@@ -7,10 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Globe, Save, Users } from "lucide-react";
+import { SystemSetting } from "@/types";
+
+interface SettingsState {
+  [key: string]: string;
+}
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<{ [key: string]: string }>({
+  const [settings, setSettings] = useState<SettingsState>({
     CROWD_THRESHOLD: "5",
     DECAY_DAYS: "30",
     DISTANCE_THRESHOLD: "0.002",
@@ -21,9 +26,9 @@ export default function AdminSettingsPage() {
       try {
         const res = await fetch("/api/admin/settings");
         if (res.ok) {
-          const data = await res.json();
-          const mapped: { [key: string]: string } = {};
-          data.forEach((s: any) => {
+          const data: SystemSetting[] = await res.json();
+          const mapped: SettingsState = {};
+          data.forEach((s) => {
             mapped[s.key] = s.value;
           });
           setSettings(mapped);
@@ -52,8 +57,9 @@ export default function AdminSettingsPage() {
         throw new Error(errorData.error || "Update failed");
       }
       toast.success(`${key.replace(/_/g, ' ')} updated successfully`);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Update failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -64,12 +70,12 @@ export default function AdminSettingsPage() {
       <div className="flex items-center gap-4">
         <div className="p-3 bg-primary/10 text-primary rounded-xl">
           <Settings className="w-8 h-8" />
-        </div >
+        </div>
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight">System Configuration</h1>
           <p className="text-lg text-muted-foreground mt-1">Manage global parameters for the reporting system.</p>
-        </div >
-      </div >
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="shadow-lg border-none bg-card/50 backdrop-blur">
@@ -97,11 +103,11 @@ export default function AdminSettingsPage() {
                 >
                   {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                 </Button>
-              </div >
+              </div>
               <p className="text-sm text-muted-foreground/80 leading-relaxed">
-                Number of reports within a radius to trigger a pulsing orange "Community Alert".
+                Number of reports within a radius to trigger a pulsing orange &quot;Community Alert&quot;.
               </p>
-            </div >
+            </div>
             <div className="space-y-3">
               <Label htmlFor="DISTANCE_THRESHOLD" className="text-sm font-medium">Clustering Radius (Dec. Deg)</Label>
               <div className="flex gap-3">
@@ -119,11 +125,11 @@ export default function AdminSettingsPage() {
                 >
                   {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                 </Button>
-              </div >
+              </div>
               <p className="text-sm text-muted-foreground/80 leading-relaxed">
                 Approx distance in decimal degrees (0.001 ≈ 111m).
               </p>
-            </div >
+            </div>
           </CardContent>
         </Card>
 
@@ -152,14 +158,14 @@ export default function AdminSettingsPage() {
                 >
                   {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                 </Button>
-              </div >
+              </div>
               <p className="text-sm text-muted-foreground/80 leading-relaxed">
                 Reports older than this value will be hidden from the public map.
               </p>
-            </div >
+            </div>
           </CardContent>
         </Card>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 }

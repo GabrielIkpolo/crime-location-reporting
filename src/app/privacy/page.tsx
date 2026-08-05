@@ -2,7 +2,6 @@
 
 import React from "react";
 import { PageTransition } from "@/components/ui/PageTransition";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function PrivacyPage() {
   return (
