@@ -172,15 +172,15 @@ export default function PublicMapPage() {
 
         {/* Main Content - Compact Layout */}
         <div className="flex-1 flex flex-col lg:flex-row gap-0 max-w-[1600px] mx-auto w-full">
-          {/* Map Area - Reduced height, with padding */}
-          <main className="flex-1 relative min-h-[55vh] lg:min-h-[600px] p-2 md:p-3 lg:p-4">
+          {/* Map Area - Explicit height for Leaflet to render properly */}
+          <main className="flex-1 relative p-2 md:p-3 lg:p-4">
             {loading ? (
-              <div className="h-full w-full flex flex-col items-center justify-center bg-muted/50 rounded-xl border gap-4">
+              <div className="h-[50vh] md:h-[60vh] lg:h-[600px] w-full flex flex-col items-center justify-center bg-muted/50 rounded-xl border gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
                 <p className="text-muted-foreground font-medium">Loading safety data...</p>
               </div>
             ) : (
-              <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-background">
+              <div className="h-[50vh] md:h-[60vh] lg:h-[600px] w-full rounded-xl overflow-hidden shadow-lg border bg-background">
                 <CrimeMap 
                   mode="view" 
                   reports={verifiedReports} 
