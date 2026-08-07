@@ -71,9 +71,14 @@ export default function ReportCrimePage() {
         if (file.size > 10 * 1024 * 1024) {
           throw new Error(`File ${file.name} is too large (max 10MB).`);
         }
-        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
+        const validTypes = [
+          'image/jpeg', 'image/png', 'image/webp',
+          'video/mp4', 'video/quicktime', 'video/webm',
+          'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3',
+          'application/pdf'
+        ];
         if (!validTypes.includes(file.type)) {
-          throw new Error(`File ${file.name} is an invalid type.`);
+          throw new Error(`File ${file.name} is an invalid type. Allowed: images, videos, audio (mp3, wav), and PDFs.`);
         }
       }
 
@@ -209,7 +214,7 @@ export default function ReportCrimePage() {
                     multiple 
                     onChange={handleFileChange} 
                     className="cursor-pointer p-2"
-                    accept="image/*,video/*"
+                    accept="image/*,video/*,audio/*,.pdf"
                   />
                   <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
                     <Upload className="w-4 h-4 text-muted-foreground" />
@@ -220,6 +225,7 @@ export default function ReportCrimePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {files.map((f, i) => (
                       <div key={i} className="relative aspect-square rounded-xl border bg-muted overflow-hidden group/file">
+                        {/* Image Preview */}
                         {f.type.startsWith('image/') ? (
                           <Image
                             src={URL.createObjectURL(f)}
@@ -228,12 +234,30 @@ export default function ReportCrimePage() {
                             className="object-cover"
                             style={{ objectFit: 'cover' }}
                           />
+                        ) : f.type === 'application/pdf' ? (
+                          /* PDF Preview */
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 dark:bg-red-950/20">
+                            <svg className="w-10 h-10 text-red-500 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                            </svg>
+                            <span className="text-[10px] text-red-500 font-medium">PDF</span>
+                          </div>
+                        ) : f.type.startsWith('audio/') ? (
+                          /* Audio Preview */
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-purple-50 dark:bg-purple-950/20">
+                            <svg className="w-10 h-10 text-purple-500 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12,3V13.55A4,4 0 1,0 14,11.75V7H19V18H21V7H23V11.75A4,4 0 1,1 12,16.55Z" />
+                            </svg>
+                            <span className="text-[10px] text-purple-500 font-medium">AUDIO</span>
+                          </div>
                         ) : (
+                          /* Video Preview */
                           <div className="w-full h-full flex items-center justify-center">
                             <Upload className="w-8 h-8 text-muted-foreground opacity-50" />
                           </div>
                         )}
                         
+                        {/* Hover overlay with remove button */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/file:opacity-100 transition-opacity flex items-center justify-center">
                           <Button
                             type="button"
@@ -246,6 +270,7 @@ export default function ReportCrimePage() {
                           </Button>
                         </div>
 
+                        {/* File name */}
                         <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate">
                           {f.name}
                         </div>

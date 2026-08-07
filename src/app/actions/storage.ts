@@ -20,9 +20,11 @@ export async function uploadMediaAction(formData: FormData) {
   // Security Constants
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   const ALLOWED_TYPES = [
-    'image/jpeg', 'image/png', 'image/webp', 
-    'video/mp4', 'video/quicktime', 'video/webm'
-  ];
+    'image/jpeg', 'image/png', 'image/webp',
+    'video/mp4', 'video/quicktime', 'video/webm',
+    'audio/mpeg', 'audio/wav', 'audio/x-wav',
+    'application/pdf'
+  ] as const;
 
   // Check Cloudinary Config in Production
   if (!isDev && (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET)) {
@@ -37,8 +39,11 @@ export async function uploadMediaAction(formData: FormData) {
     }
 
     // 2. MIME Type Validation
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      throw new Error(`File ${file.name} has an invalid type. Only images and videos are allowed.`);
+    const normalizedType = file.type.toLowerCase().trim();
+    if (!ALLOWED_TYPES.includes(normalizedType as typeof ALLOWED_TYPES[number])) {
+      throw new Error(
+        `File ${file.name} has an invalid type. Allowed: images (jpg, png, webp), videos (mp4, mov, webm), audio (mp3, wav), and PDFs.`
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

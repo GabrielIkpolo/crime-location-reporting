@@ -25,6 +25,13 @@ enum RiskLevel {
   HIGH
 }
 
+enum NotificationType {
+  HOTSPOT_ALERT
+  REPORT_STATUS_CHANGE
+  COMMUNITY_WARNING
+  SOS_RESPONSE
+}
+
 model User {
   id            String     @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
@@ -35,10 +42,13 @@ model User {
   role          UserRole   @default(USER)
   accounts      Account[]
   sessions      Session[]
-  reports       Report[]
-  adminLogs     AdminLog[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  reports                  Report[]
+  adminLogs                AdminLog[]
+  notifications            Notification[]
+  sosEmergencyContacts     SosEmergencyContact[]
+  notificationPreferences  NotificationPreference[]
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
 }
 
 model Account {
@@ -111,4 +121,44 @@ model SystemSetting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String           @db.ObjectId
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean          @default(false)
+  metadata    Json?            // Additional data (e.g., reportId, location)
+  createdAt   DateTime         @default(now())
+}
+
+model SosEmergencyContact {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String?
+  email     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model NotificationPreference {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String           @db.ObjectId
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotspotAlerts Boolean          @default(true)
+  statusChanges Boolean          @default(true)
+  communityWarnings Boolean        @default(true)
+  sosResponses  Boolean          @default(true)
+  emailEnabled  Boolean          @default(false)
+  pushEnabled   Boolean          @default(true)
+  radiusKm      Float            @default(5)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([userId])
 }

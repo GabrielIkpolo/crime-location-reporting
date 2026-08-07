@@ -25,8 +25,8 @@ const communityIcon = L.divIcon({
 });
 
 // Fix for default Leaflet marker icons
-// @ts-expect-error - Leaflet type definitions don't include this property
-delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
+const DefaultIconPrototype = L.Icon.Default.prototype;
+delete (DefaultIconPrototype as { _getIconUrl?: string })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -84,7 +84,7 @@ function MarkerClusterLayer({ reports }: { reports: Report[] }) {
 
   useEffect(() => {
     if (!reports || reports.length === 0) return;
-    const group = (L.markerClusterGroup as any)();
+    const group = L.markerClusterGroup();
     reports.forEach((report) => {
       const location = report.location as unknown as GeoJSONPoint;
       const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number]);

@@ -5,17 +5,21 @@ A professional, real-time public safety ecosystem allowing citizens to report cr
 ## Core Features
 
 ### For Citizens
-- **Intelligent Reporting**: Report incidents with precise GPS coordinates, descriptions, and media evidence.
+- **Intelligent Reporting**: Report incidents with precise GPS coordinates, descriptions, and media evidence (images, videos, audio, PDFs).
 - **Anonymous Mode**: Option to submit reports without revealing identity while maintaining security audit trails.
-- **Public Safety Dashboard**: An interactive map showing verified crime hotspots and real-time "Community Alerts" (crowdsourced urgency).
+- **Public Safety Dashboard**: An interactive map showing verified crime hotspots and real-time "Community Alerts" (crowdsourced urgency) with an overview of all of Nigeria.
 - **My Reports Portal**: Track the status of submitted reports from `Pending` to `Verified` or `Rejected`.
 - **User Accounts**: Secure registration and login with Google OAuth support.
+- **SOS Emergency Button**: One-tap panic button that instantly shares your live location with trusted contacts and emergency services.
+- **Dark Mode**: Toggle between light and dark themes for comfortable viewing in any environment.
+- **Crime Notifications**: Receive alerts when new crime hotspots are reported near you.
 
 ### For Security Agencies (Admin)
 - **Verification Queue**: Review incoming reports and update status/risk levels.
 - **Analytical Command Center**: High-level statistics and an analytical heatmap for hotspot detection.
 - **User Management**: Manage system access and administrative roles.
 - **Audit Logging**: Full transparency of all administrative actions.
+- **System Configuration**: Adjust crowdsourcing thresholds, clustering radius, and data retention policies.
 
 ## Technical Stack
 - **Framework**: Next.js 16.2.10 (App Router)
@@ -23,9 +27,10 @@ A professional, real-time public safety ecosystem allowing citizens to report cr
 - **Styling**: Tailwind CSS & Shadcn UI
 - **Database**: MongoDB via Prisma ORM
 - **Authentication**: NextAuth.js (Credentials & Google OAuth)
-- **Mapping**: Leaflet.js & OpenStreetMap (Open Source)
+- **Mapping**: Leaflet.js & OpenStreetMap (Open Source) — initial view covers all of Nigeria
 - **Storage**: Hybrid (Local for Dev, Cloudinary for Prod)
-- **Notifications**: Sonner (Toast Notifications)
+- **Notifications**: Sonner (Toast), in-app notification center, and email alerts
+- **Theme System**: Light/Dark mode with persistent user preference
 
 ## Installation & Setup
 

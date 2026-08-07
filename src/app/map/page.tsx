@@ -4,8 +4,9 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/ui/PageTransition";
-import { Loader2, TrendingUp, ShieldCheck, AlertTriangle, Users } from "lucide-react";
+import { Loader2, TrendingUp, ShieldCheck, AlertTriangle, Users, MapPin, ZoomIn, ZoomOut, LocateFixed } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Report, CommunityAlert } from "@/types";
 
 const CrimeMap = dynamic(() => import("@/components/Map/CrimeMap"), { 
@@ -13,12 +14,16 @@ const CrimeMap = dynamic(() => import("@/components/Map/CrimeMap"), {
   loading: () => <div className="h-full w-full flex items-center justify-center bg-muted">Loading Map...</div>
 });
 
+// Nigeria bounding box for overview
+const NIGERIA_CENTER: [number, number] = [8.6753, 6.0]; // Center of Nigeria
+const NIGERIA_ZOOM = 6; // Zoom level to show all of Nigeria
+
 export default function PublicMapPage() {
   const [verifiedReports, setVerifiedReports] = useState<Report[]>([]);
   const [communityAlerts, setCommunityAlerts] = useState<CommunityAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, highRisk: 0, crowdAlerts: 0 });
-  const [mapCenter, setMapCenter] = useState<[number, number]>([3.3792, 6.5244]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(NIGERIA_CENTER);
 
   useEffect(() => {
     async function fetchReports() {
@@ -58,6 +63,34 @@ export default function PublicMapPage() {
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-2 md:gap-3">
+            {/* Nigeria Overview Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMapCenter(NIGERIA_CENTER)}
+              className="gap-1 h-8 px-3 text-xs"
+            >
+              <ZoomIn className="w-3 h-3" />
+              Nigeria Overview
+            </Button>
+
+            {/* Locate Me Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => setMapCenter([pos.coords.longitude, pos.coords.latitude]),
+                  () => {},
+                  { enableHighAccuracy: true }
+                );
+              }}
+              className="gap-1 h-8 px-3 text-xs"
+            >
+              <LocateFixed className="w-3 h-3" />
+              Locate Me
+            </Button>
+
             <Card className="bg-primary/5 border-primary/20 shadow-none">
               <CardContent className="p-2 px-3 md:px-4 flex items-center gap-2 md:gap-3">
                 <TrendingUp className="w-4 h-4 text-primary" />

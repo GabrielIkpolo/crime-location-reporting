@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldAlert, MapPin, Eye, User, Menu, X } from "lucide-react";
+import { ShieldAlert, MapPin, Eye, User, Menu, X, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "next-auth/react";
 import { UserRole } from "@/types";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -56,7 +58,13 @@ export default function Navbar() {
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle - visible on all pages */}
+          <ThemeToggle />
+
+          {/* Notification Bell - only for logged-in users */}
+          {session && <NotificationBell />}
+
           {session ? (
             <div className="hidden md:flex items-center gap-3">
               <Link 
