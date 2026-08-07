@@ -40,6 +40,7 @@ interface CrimeMapProps {
   onLocationSelect?: (pos: [number, number]) => void;
   reports?: Report[];
   communityAlerts?: CommunityAlert[];
+  selectedReportId?: string;
 }
 
 function LocationMarker({ onLocationSelect }: { onLocationSelect: (pos: [number, number]) => void }) {
@@ -78,7 +79,7 @@ function LocateButton({ onLocationSelect }: { onLocationSelect?: (pos: [number, 
   );
 }
 
-function MarkerClusterLayer({ reports }: { reports: Report[] }) {
+function MarkerClusterLayer({ reports, selectedReportId }: { reports: Report[]; selectedReportId?: string }) {
   const map = useMap();
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
 
@@ -87,7 +88,26 @@ function MarkerClusterLayer({ reports }: { reports: Report[] }) {
     const group = L.markerClusterGroup();
     reports.forEach((report) => {
       const location = report.location as unknown as GeoJSONPoint;
-      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number]);
+      
+      // Create custom icon based on risk level
+      let markerColor = '#22c55e'; // green for LOW
+      if (report.riskLevel === 'MEDIUM') markerColor = '#f97316'; // orange
+      else if (report.riskLevel === 'HIGH') markerColor = '#ef4444'; // red
+      
+      const isSelected = report.id === selectedReportId;
+      const iconSize = isSelected ? 28 : 20;
+      
+      const customIcon = L.divIcon({
+        className: `custom-marker ${isSelected ? 'selected-marker' : ''}`,
+        html: `<div style="position:relative; width:${iconSize}px; height:${iconSize}px;">
+          <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:${iconSize-8}px; height:${iconSize-8}px; background:${markerColor}; border-radius:50%; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+          ${isSelected ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:' + (iconSize+8) + 'px; height:' + (iconSize+8) + 'px; border:2px solid ' + markerColor + '; border-radius:50%; animation:pulse-ring 1.5s infinite;"></div>' : ''}
+        </div>`,
+        iconSize: [iconSize, iconSize],
+        iconAnchor: [iconSize/2, iconSize/2],
+      });
+
+      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
       
       marker.on('add', () => {
         const el = marker.getElement();
@@ -95,10 +115,13 @@ function MarkerClusterLayer({ reports }: { reports: Report[] }) {
       });
 
       marker.bindPopup(`
-        <div class="p-1">
+        <div class="p-1 min-w-[200px]">
           <strong class="block text-sm">${sanitizeHTML(report.type)}</strong>
-          <p class="text-xs text-muted-foreground">${sanitizeHTML(report.description)}</p>
-          <div class="mt-2 text-[10px] font-bold text-green-600">✓ Officially Verified</div>
+          <p class="text-xs text-muted-foreground mt-1">${sanitizeHTML(report.description)}</p>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="text-[10px] font-bold ${report.riskLevel === 'HIGH' ? 'text-red-600' : report.riskLevel === 'MEDIUM' ? 'text-orange-600' : 'text-green-600'}">${report.riskLevel} Risk</span>
+            <span class="text-[10px] font-bold text-green-600">✓ Verified</span>
+          </div>
         </div>
       `);
       group.addLayer(marker);
@@ -106,11 +129,11 @@ function MarkerClusterLayer({ reports }: { reports: Report[] }) {
     group.addTo(map);
     clusterGroupRef.current = group;
     return () => { if (group) map.removeLayer(group); };
-  }, [reports, map]);
+  }, [reports, map, selectedReportId]);
   return null;
 }
 
-function CommunityAlertLayer({ alerts }: { alerts: CommunityAlert[] }) {
+function CommunityAlertLayer({ alerts, selectedAlertId }: { alerts: CommunityAlert[]; selectedAlertId?: string }) {
   const map = useMap();
   const alertGroupRef = useRef<L.LayerGroup | null>(null);
 
@@ -119,7 +142,23 @@ function CommunityAlertLayer({ alerts }: { alerts: CommunityAlert[] }) {
     const group = L.layerGroup();
     alerts.forEach((alert) => {
       const location = alert.location as unknown as GeoJSONPoint;
-      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: communityIcon });
+      
+      const isSelected = alert.id === selectedAlertId;
+      const scale = isSelected ? 1.3 : 1;
+      
+      const customIcon = L.divIcon({
+        className: `custom-alert-marker ${isSelected ? 'selected-alert' : ''}`,
+        html: `<div style="position:relative; transform:scale(${scale}); transform-origin:center center;">
+          <div class="absolute w-8 h-8 bg-orange-500 rounded-full animate-ping opacity-75"></div>
+          <div class="relative w-8 h-8 bg-orange-600 rounded-full border-2 ${isSelected ? 'border-yellow-400 border-[3px]' : 'border-white'} flex items-center justify-center text-white shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          </div>
+        </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      });
+
+      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
       
       marker.on('add', () => {
         const el = marker.getElement();
@@ -127,7 +166,7 @@ function CommunityAlertLayer({ alerts }: { alerts: CommunityAlert[] }) {
       });
 
       marker.bindPopup(`
-        <div class="p-1 text-center">
+        <div class="p-1 min-w-[200px]">
           <div class="flex items-center justify-center gap-1 text-orange-600 font-bold text-sm mb-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Community Alert
           </div>
@@ -143,11 +182,11 @@ function CommunityAlertLayer({ alerts }: { alerts: CommunityAlert[] }) {
     group.addTo(map);
     alertGroupRef.current = group;
     return () => { if (group) map.removeLayer(group); };
-  }, [alerts, map]);
+  }, [alerts, map, selectedAlertId]);
   return null;
 }
 
-export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, onLocationSelect, reports = [], communityAlerts = [] }: CrimeMapProps) {
+export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, onLocationSelect, reports = [], communityAlerts = [], selectedReportId }: CrimeMapProps) {
   const [position, setPosition] = useState<[number, number]>(initialPos);
 
   // Update position when center prop changes (from card clicks)
@@ -197,8 +236,8 @@ export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, 
         )}
         {mode === "view" && (
           <>
-            <MarkerClusterLayer reports={reports} />
-            <CommunityAlertLayer alerts={communityAlerts} />
+            <MarkerClusterLayer reports={reports} selectedReportId={selectedReportId} />
+            <CommunityAlertLayer alerts={communityAlerts} selectedAlertId={undefined} />
           </>
         )}
       </MapContainer>

@@ -69,7 +69,7 @@ export async function PATCH(
         where: {
           userId: session.user.id,
           isPrimary: true,
-          id: { $ne: contactId },
+          NOT: { id: contactId },
         },
         data: { isPrimary: false },
       });

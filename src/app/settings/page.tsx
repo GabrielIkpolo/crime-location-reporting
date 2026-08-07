@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
@@ -804,7 +805,7 @@ function Badge({
   variant?: string;
   className?: string;
   children: React.ReactNode;
-}): JSX.Element {
+}) {
   const baseClasses =
     "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors";
   const variantClasses: Record<string, string> = {

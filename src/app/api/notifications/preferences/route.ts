@@ -78,7 +78,15 @@ export async function PUT(request: Request): Promise<NextResponse> {
     }
 
     // Build update data (only include provided fields)
-    const updateData: Record<string, unknown> = {};
+    const updateData: {
+      hotspotAlerts?: boolean;
+      statusChanges?: boolean;
+      communityWarnings?: boolean;
+      sosResponses?: boolean;
+      emailEnabled?: boolean;
+      pushEnabled?: boolean;
+      radiusKm?: number;
+    } = {};
     if (hotspotAlerts !== undefined) updateData.hotspotAlerts = hotspotAlerts;
     if (statusChanges !== undefined) updateData.statusChanges = statusChanges;
     if (communityWarnings !== undefined) updateData.communityWarnings = communityWarnings;
@@ -91,7 +99,6 @@ export async function PUT(request: Request): Promise<NextResponse> {
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
-        ...updateData,
         hotspotAlerts: updateData.hotspotAlerts ?? true,
         statusChanges: updateData.statusChanges ?? true,
         communityWarnings: updateData.communityWarnings ?? true,
@@ -100,7 +107,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
         pushEnabled: updateData.pushEnabled ?? true,
         radiusKm: updateData.radiusKm ?? 5,
       },
-      update: updateData,
+      update: updateData as any,
     });
 
     return NextResponse.json(preferences);

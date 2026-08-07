@@ -16,7 +16,7 @@ interface NotificationItem {
   createdAt: string;
 }
 
-export function NotificationBell(): JSX.Element {
+export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);

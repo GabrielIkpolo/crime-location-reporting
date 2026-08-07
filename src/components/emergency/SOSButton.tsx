@@ -11,9 +11,10 @@ interface SosContact {
   name: string;
   phone?: string | null;
   email?: string | null;
+  isPrimary?: boolean;
 }
 
-export function SOSButton(): JSX.Element {
+export function SOSButton() {
   const [isActive, setIsActive] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [countdown, setCountdown] = useState(5);
