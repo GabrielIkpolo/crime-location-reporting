@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageTransition } from "@/components/ui/PageTransition";
-import { registerUserAction } from "@/app/actions/auth";
+
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -33,8 +33,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const result = await registerUserAction(formData);
-      if (result.success) {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         toast.success("Account created successfully!", {
           description: "You can now sign in to start reporting.",
         });
@@ -42,7 +49,7 @@ export default function RegisterPage() {
         router.refresh();
       } else {
         toast.error("Registration Failed", {
-          description: result.error,
+          description: data.error || "An unexpected error occurred.",
         });
       }
     } catch (err: unknown) {

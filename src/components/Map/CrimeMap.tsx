@@ -85,50 +85,64 @@ function MarkerClusterLayer({ reports, selectedReportId }: { reports: Report[]; 
 
   useEffect(() => {
     if (!reports || reports.length === 0) return;
-    const group = L.markerClusterGroup();
-    reports.forEach((report) => {
-      const location = report.location as unknown as GeoJSONPoint;
-      
-      // Create custom icon based on risk level
-      let markerColor = '#22c55e'; // green for LOW
-      if (report.riskLevel === 'MEDIUM') markerColor = '#f97316'; // orange
-      else if (report.riskLevel === 'HIGH') markerColor = '#ef4444'; // red
-      
-      const isSelected = report.id === selectedReportId;
-      const iconSize = isSelected ? 28 : 20;
-      
-      const customIcon = L.divIcon({
-        className: `custom-marker ${isSelected ? 'selected-marker' : ''}`,
-        html: `<div style="position:relative; width:${iconSize}px; height:${iconSize}px;">
-          <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:${iconSize-8}px; height:${iconSize-8}px; background:${markerColor}; border-radius:50%; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
-          ${isSelected ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:' + (iconSize+8) + 'px; height:' + (iconSize+8) + 'px; border:2px solid ' + markerColor + '; border-radius:50%; animation:pulse-ring 1.5s infinite;"></div>' : ''}
-        </div>`,
-        iconSize: [iconSize, iconSize],
-        iconAnchor: [iconSize/2, iconSize/2],
-      });
 
-      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
-      
-      marker.on('add', () => {
-        const el = marker.getElement();
-        if (el) el.style.cursor = 'pointer';
-      });
+    // Pre-sanitize all report data (async, but safe inside useEffect)
+    const sanitizePromises = reports.map(async (report) => ({
+      ...report,
+      type: await sanitizeHTML(report.type),
+      description: await sanitizeHTML(report.description),
+    }));
 
-      marker.bindPopup(`
-        <div class="p-1 min-w-[200px]">
-          <strong class="block text-sm">${sanitizeHTML(report.type)}</strong>
-          <p class="text-xs text-muted-foreground mt-1">${sanitizeHTML(report.description)}</p>
-          <div class="mt-2 flex items-center gap-2">
-            <span class="text-[10px] font-bold ${report.riskLevel === 'HIGH' ? 'text-red-600' : report.riskLevel === 'MEDIUM' ? 'text-orange-600' : 'text-green-600'}">${report.riskLevel} Risk</span>
-            <span class="text-[10px] font-bold text-green-600">✓ Verified</span>
+    Promise.all(sanitizePromises).then((sanitizedReports) => {
+      const group = L.markerClusterGroup();
+      sanitizedReports.forEach((report) => {
+        const location = report.location as unknown as GeoJSONPoint;
+
+        // Create custom icon based on risk level
+        let markerColor = '#22c55e'; // green for LOW
+        if (report.riskLevel === 'MEDIUM') markerColor = '#f97316'; // orange
+        else if (report.riskLevel === 'HIGH') markerColor = '#ef4444'; // red
+
+        const isSelected = report.id === selectedReportId;
+        const iconSize = isSelected ? 28 : 20;
+
+        const customIcon = L.divIcon({
+          className: `custom-marker ${isSelected ? 'selected-marker' : ''}`,
+          html: `<div style="position:relative; width:${iconSize}px; height:${iconSize}px;">
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:${iconSize-8}px; height:${iconSize-8}px; background:${markerColor}; border-radius:50%; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+            ${isSelected ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:' + (iconSize+8) + 'px; height:' + (iconSize+8) + 'px; border:2px solid ' + markerColor + '; border-radius:50%; animation:pulse-ring 1.5s infinite;"></div>' : ''}
+          </div>`,
+          iconSize: [iconSize, iconSize],
+          iconAnchor: [iconSize / 2, iconSize / 2],
+        });
+
+        const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
+
+        marker.on('add', () => {
+          const el = marker.getElement();
+          if (el) el.style.cursor = 'pointer';
+        });
+
+        marker.bindPopup(`
+          <div class="p-1 min-w-[200px]">
+            <strong class="block text-sm">${report.type}</strong>
+            <p class="text-xs text-muted-foreground mt-1">${report.description}</p>
+            <div class="mt-2 flex items-center gap-2">
+              <span class="text-[10px] font-bold ${report.riskLevel === 'HIGH' ? 'text-red-600' : report.riskLevel === 'MEDIUM' ? 'text-orange-600' : 'text-green-600'}">${report.riskLevel} Risk</span>
+              <span class="text-[10px] font-bold text-green-600">✓ Verified</span>
+            </div>
           </div>
-        </div>
-      `);
-      group.addLayer(marker);
+        `);
+        group.addLayer(marker);
+      });
+      group.addTo(map);
+      clusterGroupRef.current = group;
     });
-    group.addTo(map);
-    clusterGroupRef.current = group;
-    return () => { if (group) map.removeLayer(group); };
+
+    return () => {
+      const group = clusterGroupRef.current;
+      if (group) map.removeLayer(group);
+    };
   }, [reports, map, selectedReportId]);
   return null;
 }
@@ -139,49 +153,62 @@ function CommunityAlertLayer({ alerts, selectedAlertId }: { alerts: CommunityAle
 
   useEffect(() => {
     if (!alerts || alerts.length === 0) return;
-    const group = L.layerGroup();
-    alerts.forEach((alert) => {
-      const location = alert.location as unknown as GeoJSONPoint;
-      
-      const isSelected = alert.id === selectedAlertId;
-      const scale = isSelected ? 1.3 : 1;
-      
-      const customIcon = L.divIcon({
-        className: `custom-alert-marker ${isSelected ? 'selected-alert' : ''}`,
-        html: `<div style="position:relative; transform:scale(${scale}); transform-origin:center center;">
-          <div class="absolute w-8 h-8 bg-orange-500 rounded-full animate-ping opacity-75"></div>
-          <div class="relative w-8 h-8 bg-orange-600 rounded-full border-2 ${isSelected ? 'border-yellow-400 border-[3px]' : 'border-white'} flex items-center justify-center text-white shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-          </div>
-        </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-      });
 
-      const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
-      
-      marker.on('add', () => {
-        const el = marker.getElement();
-        if (el) el.style.cursor = 'pointer';
-      });
+    // Pre-sanitize all alert data (async, but safe inside useEffect)
+    const sanitizePromises = alerts.map(async (alert) => ({
+      ...alert,
+      type: await sanitizeHTML(alert.type),
+    }));
 
-      marker.bindPopup(`
-        <div class="p-1 min-w-[200px]">
-          <div class="flex items-center justify-center gap-1 text-orange-600 font-bold text-sm mb-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Community Alert
+    Promise.all(sanitizePromises).then((sanitizedAlerts) => {
+      const group = L.layerGroup();
+      sanitizedAlerts.forEach((alert) => {
+        const location = alert.location as unknown as GeoJSONPoint;
+
+        const isSelected = alert.id === selectedAlertId;
+        const scale = isSelected ? 1.3 : 1;
+
+        const customIcon = L.divIcon({
+          className: `custom-alert-marker ${isSelected ? 'selected-alert' : ''}`,
+          html: `<div style="position:relative; transform:scale(${scale}); transform-origin:center center;">
+            <div class="absolute w-8 h-8 bg-orange-500 rounded-full animate-ping opacity-75"></div>
+            <div class="relative w-8 h-8 bg-orange-600 rounded-full border-2 ${isSelected ? 'border-yellow-400 border-[3px]' : 'border-white'} flex items-center justify-center text-white shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+          </div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        });
+
+        const marker = L.marker([location.coordinates[1], location.coordinates[0]] as [number, number], { icon: customIcon });
+
+        marker.on('add', () => {
+          const el = marker.getElement();
+          if (el) el.style.cursor = 'pointer';
+        });
+
+        marker.bindPopup(`
+          <div class="p-1 min-w-[200px]">
+            <div class="flex items-center justify-center gap-1 text-orange-600 font-bold text-sm mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Community Alert
+            </div>
+            <p class="text-xs font-medium">${alert.type}</p>
+            <p class="text-[10px] text-muted-foreground mt-1">
+              Reported by ${alert.reportCount} citizens. <br/>
+              <span class="italic">Awaiting official verification.</span>
+            </p>
           </div>
-          <p class="text-xs font-medium">${sanitizeHTML(alert.type)}</p>
-          <p class="text-[10px] text-muted-foreground mt-1">
-            Reported by ${alert.reportCount} citizens. <br/>
-            <span class="italic">Awaiting official verification.</span>
-          </p>
-        </div>
-      `);
-      group.addLayer(marker);
+        `);
+        group.addLayer(marker);
+      });
+      group.addTo(map);
+      alertGroupRef.current = group;
     });
-    group.addTo(map);
-    alertGroupRef.current = group;
-    return () => { if (group) map.removeLayer(group); };
+
+    return () => {
+      const group = alertGroupRef.current;
+      if (group) map.removeLayer(group);
+    };
   }, [alerts, map, selectedAlertId]);
   return null;
 }

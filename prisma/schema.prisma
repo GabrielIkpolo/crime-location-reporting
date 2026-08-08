@@ -46,9 +46,10 @@ model User {
   adminLogs                AdminLog[]
   notifications            Notification[]
   sosEmergencyContacts     SosEmergencyContact[]
-  notificationPreferences  NotificationPreference[]
-  createdAt                DateTime   @default(now())
-  updatedAt                DateTime   @updatedAt
+  notificationPreferences    NotificationPreference[]
+  passwordResetTokens        PasswordResetToken[]
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
 }
 
 model Account {
@@ -87,6 +88,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model PasswordResetToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([identifier, token])
+}
+
 model Report {
   id                String       @id @default(auto()) @map("_id") @db.ObjectId
   type              String
@@ -104,6 +116,10 @@ model Report {
   adminLogs         AdminLog[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([riskLevel])
 }
 
 model AdminLog {
@@ -114,6 +130,9 @@ model AdminLog {
   reportId  String?  @db.ObjectId
   action    String
   timestamp DateTime @default(now())
+
+  @@index([adminId, timestamp])
+  @@index([reportId])
 }
 
 model SystemSetting {
@@ -133,6 +152,8 @@ model Notification {
   isRead      Boolean          @default(false)
   metadata    Json?            // Additional data (e.g., reportId, location)
   createdAt   DateTime         @default(now())
+
+  @@index([userId, isRead])
 }
 
 model SosEmergencyContact {

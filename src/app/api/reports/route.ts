@@ -104,6 +104,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * GET /api/reports
+ * Returns verified reports and community alerts.
+ *
+ * Caching strategy:
+ * - Verified reports: revalidate every 5 minutes (stale-while-revalidate)
+ *   because verification status changes infrequently.
+ * - Community alerts are computed server-side from pending reports,
+ *   so they share the same cache window.
+ */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     // Fetch dynamic settings
@@ -205,10 +217,18 @@ export async function GET() {
     }
 
     logger.info({ verifiedCount: verifiedReports.length, crowdAlertsCount: crowdAlerts.length }, "[REPORTS_API] GET successful");
-    return NextResponse.json({
+
+    // API Caching — revalidate every 5 minutes (stale-while-revalidate)
+    // This prevents redundant DB queries on every page refresh.
+    const response = NextResponse.json({
       verified: verifiedReports,
       communityAlerts: crowdAlerts,
     });
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=300, stale-while-revalidate=600"
+    );
+    return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error({ error: errorMessage }, "[REPORTS_API_GET] ERROR");

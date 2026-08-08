@@ -31,18 +31,22 @@ export default function PublicMapPage() {
   const [showCrowdAlerts, setShowCrowdAlerts] = useState(true);
 
   useEffect(() => {
-    async function fetchReports() {
+    let mounted = true;
+
+    async function loadReports() {
       try {
         const res = await fetch("/api/reports");
         if (!res.ok) throw new Error("Failed to fetch reports");
         const data = await res.json();
-        
+
+        if (!mounted) return;
+
         const verified = data.verified || [];
         const alerts = data.communityAlerts || [];
 
         setVerifiedReports(verified);
         setCommunityAlerts(alerts);
-        
+
         setStats({
           total: verified.length,
           highRisk: verified.filter((r: Report) => r.riskLevel === "HIGH").length,
@@ -51,10 +55,36 @@ export default function PublicMapPage() {
       } catch (err) {
         console.error("Failed to fetch reports", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
-    fetchReports();
+
+    loadReports();
+
+    // Periodic revalidation — refresh data every 5 minutes in background
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/reports", { cache: "no-cache" });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        setVerifiedReports(data.verified || []);
+        setCommunityAlerts(data.communityAlerts || []);
+
+        setStats({
+          total: (data.verified || []).length,
+          highRisk: (data.verified || []).filter((r: Report) => r.riskLevel === "HIGH").length,
+          crowdAlerts: (data.communityAlerts || []).length,
+        });
+      } catch {
+        // Silently ignore background refresh failures
+      }
+    }, 5 * 60 * 1000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleCardClick = useCallback((type: CardType, id: string, coordinates: [number, number]) => {

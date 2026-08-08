@@ -115,8 +115,18 @@ export default function SettingsPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Profile updated successfully!");
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: profileData.name }),
+      });
+
+      if (response.ok) {
+        toast.success("Profile updated successfully!");
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update profile");
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred";
       console.error("[Settings] Unexpected error:", err);
@@ -200,6 +210,91 @@ export default function SettingsPage() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update contact";
       toast.error("Failed to update contact", { description: message });
+    }
+  };
+
+  // Change Password handler
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [changePasswordData, setChangePasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleChangePassword = async () => {
+    if (
+      !changePasswordData.currentPassword ||
+      !changePasswordData.newPassword ||
+      changePasswordData.newPassword.length < 8
+    ) {
+      toast.error("Invalid input", { description: "Please fill in all fields. New password must be at least 8 characters." });
+      return;
+    }
+    if (changePasswordData.newPassword !== changePasswordData.confirmPassword) {
+      toast.error("Passwords don't match", { description: "New password and confirmation must match." });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/user/change-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: changePasswordData.currentPassword,
+          newPassword: changePasswordData.newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Password changed successfully!");
+        setShowChangePassword(false);
+        setChangePasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to change password");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[Settings] Change password error:", err);
+      toast.error("Failed to change password", { description: message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete Account handler
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("⚠️ Are you absolutely sure? This action CANNOT be undone. All your data will be permanently deleted.")) {
+      return;
+    }
+
+    const password = prompt("Please enter your password to confirm account deletion:");
+    if (password === null) return; // User cancelled
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/user/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmDelete: true, password }),
+      });
+
+      if (response.ok) {
+        toast.success("Account deleted successfully.");
+        // Sign out and redirect to home
+        await fetch("/api/auth/signout", { method: "POST" });
+        window.location.href = "/";
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete account");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[Settings] Delete account error:", err);
+      toast.error("Failed to delete account", { description: message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -728,19 +823,63 @@ export default function SettingsPage() {
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                       Password
                     </h3>
-                    <div className="p-4 rounded-xl border bg-card space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Change Password</p>
-                          <p className="text-xs text-muted-foreground">
-                            Update your password regularly for better security
-                          </p>
+                    {!showChangePassword ? (
+                      <div className="p-4 rounded-xl border bg-card space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Change Password</p>
+                            <p className="text-xs text-muted-foreground">
+                              Update your password regularly for better security
+                            </p>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => setShowChangePassword(true)}>
+                            Change Password
+                          </Button>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Change Password
-                        </Button>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border bg-card space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="currentPassword">Current Password</Label>
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            value={changePasswordData.currentPassword}
+                            onChange={(e) => setChangePasswordData({ ...changePasswordData, currentPassword: e.target.value })}
+                            placeholder="Enter current password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="newPassword">New Password</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            value={changePasswordData.newPassword}
+                            onChange={(e) => setChangePasswordData({ ...changePasswordData, newPassword: e.target.value })}
+                            placeholder="Enter new password (min 8 characters)"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+                          <Input
+                            id="confirmNewPassword"
+                            type="password"
+                            value={changePasswordData.confirmPassword}
+                            onChange={(e) => setChangePasswordData({ ...changePasswordData, confirmPassword: e.target.value })}
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" onClick={handleChangePassword} disabled={loading}>
+                            {loading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />}
+                            Update Password
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => { setShowChangePassword(false); setChangePasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" }); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
@@ -780,7 +919,8 @@ export default function SettingsPage() {
                             Permanently delete your account and all associated data
                           </p>
                         </div>
-                        <Button variant="destructive" size="sm">
+                        <Button variant="destructive" size="sm" onClick={handleDeleteAccount} disabled={loading}>
+                          {loading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1.5" />}
                           Delete Account
                         </Button>
                       </div>
