@@ -24,7 +24,7 @@
 - **Fix**: Add rate limiting to credentials sign-in and registration
 
 ### Phase 2 — High Priority (Deferred)
-5. Implement profile update API (`PATCH /api/user/profile`)
-6. Fix sanitizeHTML with DOMPurify
-7. Add Prisma indexes
-8. Add API caching
+5. Implement profile update API (`PATCH /api/user/profile`) ✅
+6. Fix sanitizeHTML with DOMPurify ✅ *(Build fix: `.sanitize()` call)*
+7. Add Prisma indexes ✅ *(Already in schema: [status,createdAt], [reporterId], [riskLevel], etc.)*
+8. Add API caching ✅ *(Cache-Control: s-maxage=300, stale-while-revalidate=600 on /api/reports GET)*

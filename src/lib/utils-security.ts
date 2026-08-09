@@ -31,8 +31,8 @@ function basicEscapeHTML(str: string): string {
  * executes on the client where a real DOM is available.
  */
 async function sanitizeWithDOMPurify(str: string): Promise<string> {
-  const { default: createDOMPurify } = await import("dompurify");
-  return createDOMPurify()(str, {
+  const { default: DOMPurify } = await import("dompurify");
+  return DOMPurify().sanitize(str, {
     ALLOWED_TAGS: ["b", "i", "u", "strong", "em", "a", "p", "br"],
     ALLOWED_ATTR: ["href", "target", "rel"],
   });
