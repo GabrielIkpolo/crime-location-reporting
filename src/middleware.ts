@@ -9,11 +9,16 @@ function securityHeaders(request: NextRequest): NextResponse {
   const response = NextResponse.next();
 
   // Content-Security-Policy — prevents XSS attacks
+  // NOTE: 'unsafe-eval' is required in development for Turbopack + React dev features.
+  // In production, eval() is never used by React and can be safely omitted.
+  const isDev = process.env.NODE_ENV === "development";
+  const unsafeEval = isDev ? "'unsafe-eval'" : "";
+
   response.headers.set(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://tile.openstreetmap.org",
+      `script-src 'self' ${unsafeEval.trim()} 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://tile.openstreetmap.org`.trim(),
       "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://res.cloudinary.com https://*.tile.openstreetmap.org https://avatars.githubusercontent.com",
       "font-src 'self' https://fonts.gstatic.com https://unpkg.com",
@@ -101,7 +106,12 @@ export default function middleware(req: NextRequest) {
   // The actual auth/session validation happens on the client side via SessionProvider
   // and server-side API routes via the full NextAuth instance.
   if (isAdminRoute) {
-    const hasSessionToken = req.cookies.has("__Secure-next-auth.session-token") ||
+    // NextAuth v5 can set different cookie names depending on context:
+    // - __Host-next-auth.session.token (default, requires secure context)
+    // - __Secure-next-auth.session-token (alternative prefix)
+    // - next-auth.session.token (dev mode over HTTP, no prefix)
+    const hasSessionToken = req.cookies.has("__Host-next-auth.session.token") ||
+                            req.cookies.has("__Secure-next-auth.session-token") ||
                             req.cookies.has("next-auth.session.token");
     
     if (!hasSessionToken) {

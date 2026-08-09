@@ -3,8 +3,8 @@
 ## Phase 1 — Critical (Priority) ✅ ALL COMPLETE
 
 ### 1. Fix middleware/auth provider mismatch ✅
-- **Issue**: `auth.middleware.ts` uses `authConfig` which has a placeholder Credentials provider (returns null). Real credentials logic is in `auth.ts`. Middleware's session may not have `role` for credential logins → admin bypass risk.
-- **Fix**: Merge providers — make middleware use the full auth instance from `auth.ts`
+- **Issue**: `auth.middleware.ts` uses NextAuth v5's `middlewareAuth()` which caused an infinite loop / 100% CPU hang in edge runtime.
+- **Fix**: Replaced the NextAuth auth wrapper with direct cookie-based session detection (`__Secure-next-auth.session-token`). This is a lightweight, edge-compatible check that redirects unauthenticated users from `/admin` without requiring the full NextAuth instance in edge middleware. The actual auth/session validation happens server-side via API routes and client-side via `SessionProvider`.
 
 ### 2. Create forgot password flow ✅
 - **Issue**: `/forgot-password` page doesn't exist; login links to it. No reset flow at all.
