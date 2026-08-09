@@ -5,6 +5,26 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
+// Simple in-memory rate limiter for auth attempts (per IP)
+const loginAttemptMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = loginAttemptMap.get(ip);
+
+  if (!record || now > record.resetAt) {
+    loginAttemptMap.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 }); // 15 min window
+    return true;
+  }
+
+  if (record.count >= 5) {
+    return false; // Rate limited
+  }
+
+  loginAttemptMap.set(ip, { count: record.count + 1, resetAt: record.resetAt });
+  return true;
+}
+
 export const authConfig = {
   providers: [
     Google({
@@ -17,8 +37,19 @@ export const authConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        // Rate limit login attempts per IP address (Audit fix Phase 3 #4)
+        const ip = req.headers.get("x-forwarded-for") 
+          || req.headers.get("x-real-ip") 
+          || "unknown";
+        
+        if (!checkLoginRateLimit(ip)) {
+          console.warn(`[Auth] Login rate limit exceeded for IP: ${ip}`);
+          // Return null to avoid revealing whether the account exists
           return null;
         }
 

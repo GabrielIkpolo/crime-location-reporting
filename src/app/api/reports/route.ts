@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { reportSchema } from "@/lib/validations";
-import { checkRateLimit } from "@/lib/rate-limiter";
+import { rateLimits } from "@/lib/rate-limiter";
 import { haversineDistance } from "@/lib/geo-utils";
 import logger from "@/lib/logger";
 import { GeoJSONPoint, CommunityAlert } from "@/types";
@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
     const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "Unknown";
     logger.info({ ip: ipAddress }, "[REPORTS_API] Received POST request");
     
-    // 1. Rate Limiting
-    const rateLimit = checkRateLimit(ipAddress);
+    // 1. Rate Limiting — moderate limit for report submissions
+    const rateLimit = await rateLimits.moderate(ipAddress);
     if (!rateLimit.allowed) {
       logger.warn({ ip: ipAddress }, "[REPORTS_API] Rate limit exceeded");
       return NextResponse.json({ error: "Too many reports. Please try again in an hour." }, { status: 429 });
@@ -116,8 +116,38 @@ export async function POST(req: NextRequest) {
  */
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/**
+ * GET /api/reports?page=1&limit=50&type=&status=&riskLevel=&nearLat=&nearLng=&radiusKm=
+ *
+ * Query params:
+ *   page      - Page number (default: 1)
+ *   limit     - Items per page (default: 50, max: 200)
+ *   type      - Filter by report type
+ *   status    - Filter by status (VERIFIED, PENDING, REJECTED, CROWD_REPORTED)
+ *   riskLevel - Filter by risk level (LOW, MEDIUM, HIGH)
+ *   nearLat   - Latitude for proximity search
+ *   nearLng   - Longitude for proximity search
+ *   radiusKm  - Radius in km for proximity search (default: 50)
+ */
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    
+    // Pagination params
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+    const limit = Math.min(Math.max(1, parseInt(url.searchParams.get("limit") || "50")), 200);
+    const skip = (page - 1) * limit;
+
+    // Filter params
+    const type = url.searchParams.get("type") || undefined;
+    const status = url.searchParams.get("status") || undefined;
+    const riskLevel = url.searchParams.get("riskLevel") || undefined;
+
+    // Proximity search params
+    const nearLat = parseFloat(url.searchParams.get("nearLat") || "0");
+    const nearLng = parseFloat(url.searchParams.get("nearLng") || "0");
+    const radiusKm = parseFloat(url.searchParams.get("radiusKm") || "50");
+
     // Fetch dynamic settings
     const settings = await prisma.systemSetting.findMany();
     const settingsMap: { [key: string]: string } = {};
@@ -128,20 +158,37 @@ export async function GET() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - decayDays);
 
-    // 1. Fetch verified reports from last N days
-    const verifiedReports = await prisma.report.findMany({
-      where: { 
-        status: "VERIFIED",
-        createdAt: { gte: thirtyDaysAgo }
-      },
-    });
+    // Build where clause for verified reports
+    const verifiedWhere: any = { 
+      status: "VERIFIED",
+      createdAt: { gte: thirtyDaysAgo }
+    };
+    if (type) verifiedWhere.type = type;
+    if (riskLevel) verifiedWhere.riskLevel = riskLevel;
 
-    // 2. Fetch pending reports from last N days for crowdsourced urgency
+    // Build where clause for pending reports
+    const pendingWhere: any = { 
+      status: "PENDING",
+      createdAt: { gte: thirtyDaysAgo }
+    };
+    if (type) pendingWhere.type = type;
+    if (riskLevel) pendingWhere.riskLevel = riskLevel;
+
+    // 1. Fetch verified reports with pagination
+    const [verifiedReports, totalVerified] = await Promise.all([
+      prisma.report.findMany({
+        where: verifiedWhere,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.report.count({ where: verifiedWhere }),
+    ]);
+
+    // 2. Fetch pending reports (full set for clustering — limited to recent)
     const pendingReports = await prisma.report.findMany({
-      where: { 
-        status: "PENDING",
-        createdAt: { gte: thirtyDaysAgo }
-      },
+      where: pendingWhere,
+      orderBy: { createdAt: "desc" },
     });
 
     // 3. Spatial Clustering Logic for Pending Reports (Optimized)
@@ -216,13 +263,47 @@ export async function GET() {
       }
     }
 
-    logger.info({ verifiedCount: verifiedReports.length, crowdAlertsCount: crowdAlerts.length }, "[REPORTS_API] GET successful");
+    // 4. Apply proximity filter if nearLat/nearLng provided
+    let filteredVerified = verifiedReports;
+    if (!isNaN(nearLat) && !isNaN(nearLng) && radiusKm > 0) {
+      filteredVerified = verifiedReports.filter((report) => {
+        const loc = report.location as unknown as GeoJSONPoint;
+        if (!loc || !loc.coordinates) return false;
+        return haversineDistance(
+          nearLat, nearLng,
+          loc.coordinates[1], loc.coordinates[0]
+        ) <= radiusKm;
+      });
+    }
+
+    // 5. Apply status filter to crowd alerts if requested
+    let filteredAlerts = crowdAlerts;
+    if (status === "VERIFIED") {
+      filteredAlerts = [];
+    } else if (status === "PENDING" || !status) {
+      // Keep all pending crowd alerts
+    }
+
+    logger.info({ 
+      verifiedCount: filteredVerified.length, 
+      totalVerified,
+      crowdAlertsCount: filteredAlerts.length,
+      page,
+      limit,
+    }, "[REPORTS_API] GET successful");
 
     // API Caching — revalidate every 5 minutes (stale-while-revalidate)
     // This prevents redundant DB queries on every page refresh.
     const response = NextResponse.json({
-      verified: verifiedReports,
-      communityAlerts: crowdAlerts,
+      verified: filteredVerified,
+      communityAlerts: filteredAlerts,
+      pagination: {
+        page,
+        limit,
+        total: totalVerified,
+        totalPages: Math.ceil(totalVerified / limit),
+        hasMore: skip + filteredVerified.length < totalVerified,
+      },
     });
     response.headers.set(
       "Cache-Control",

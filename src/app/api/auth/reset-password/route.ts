@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { checkRateLimit } from "@/lib/rate-limiter";
+import { rateLimits } from "@/lib/rate-limiter";
 
 /**
  * POST /api/auth/reset-password
@@ -9,9 +9,9 @@ import { checkRateLimit } from "@/lib/rate-limiter";
  */
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: 5 requests per 15 minutes per IP
+    // Rate limit: 5 requests per hour per IP (Audit fix Phase 3 #4)
     const ip = req.headers.get("x-forwarded-for") || "unknown";
-    const rateLimitResult = checkRateLimit(ip, 5, 15 * 60 * 1000);
+    const rateLimitResult = await rateLimits.passwordReset(ip);
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(

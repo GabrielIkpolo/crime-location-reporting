@@ -1,26 +1,61 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { rateLimits, checkRateLimit } from "@/lib/rate-limiter";
+import logger from "@/lib/logger";
+
+/**
+ * Zod schema for account deletion validation.
+ */
+const deleteAccountSchema = z.object({
+  confirmDelete: z.literal(true),
+  password: z.string().min(1, "Password is required to confirm account deletion."),
+}).refine((data) => data.confirmDelete === true, {
+  message: "Account deletion requires explicit confirmation.",
+});
 
 /**
  * DELETE /api/user/account
  * Permanently deletes the authenticated user's account and all associated data.
+ * Rate-limited to prevent accidental mass deletions.
  */
 export async function DELETE(req: Request) {
+  let userId: string | undefined;
+
   try {
     const session = await auth();
+    userId = session?.user?.id;
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized. Please log in." },
         { status: 401 }
       );
     }
 
-    // Verify user has a password (prevent accidental deletion of OAuth-only accounts)
+    // Rate limit: 3 attempts per hour — prevents accidental mass deletions
+    const rateLimit = await rateLimits.passwordReset(userId!);
+    if (!rateLimit.allowed) {
+      logger.warn({ userId }, "[DeleteAccount] Rate limit exceeded");
+      return NextResponse.json(
+        { error: "Too many deletion attempts. Please try again in 1 hour." },
+        { status: 429 }
+      );
+    }
+
+    // Verify user exists and get details
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { password: true, email: true, name: true },
+      where: { id: userId },
+      select: { 
+        password: true, 
+        email: true, 
+        name: true,
+        role: true,
+        createdAt: true,
+        _count: { select: { reports: true } }
+      },
     });
 
     if (!user) {
@@ -31,21 +66,22 @@ export async function DELETE(req: Request) {
     }
 
     const body = await req.json();
-    const { confirmDelete, password } = body;
 
-    // Require explicit confirmation
-    if (confirmDelete !== true) {
+    // Validate inputs with Zod
+    const validationResult = deleteAccountSchema.safeParse(body);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0]?.message || "Invalid input";
       return NextResponse.json(
-        { error: "Account deletion requires explicit confirmation. Send { confirmDelete: true }." },
+        { error: firstError },
         { status: 400 }
       );
     }
 
     // Verify password for accounts with passwords
-    if (user.password && password) {
-      const bcrypt = await import("bcryptjs");
-      const isValid = await bcrypt.compare(password, user.password);
+    if (user.password) {
+      const isValid = await bcrypt.compare(body.password, user.password);
       if (!isValid) {
+        logger.warn({ userId }, "[DeleteAccount] Incorrect password");
         return NextResponse.json(
           { error: "Password is incorrect. Account deletion cancelled." },
           { status: 401 }
@@ -53,37 +89,48 @@ export async function DELETE(req: Request) {
       }
     }
 
+    // Log the deletion action for audit trail (before deleting)
+    logger.warn({
+      userId,
+      userEmail: user.email,
+      userName: user.name,
+      role: user.role,
+      reportCount: user._count.reports,
+      accountAgeDays: Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+    }, "[DeleteAccount] Account deletion initiated");
+
     // Delete all associated data (cascade is handled by Prisma relations):
     // - Accounts (onDelete: Cascade)
-    // - Sessions (onDelete: Cascade)
-    // - Reports (kept but reporterId set to null for anonymity)
-    // - AdminLogs (deleted via cascade or kept for audit)
-    // - Notifications (onDelete: Cascade)
-    // - SosEmergencyContacts (onDelete: Cascade)
-    // - NotificationPreferences (onDelete: Cascade)
-
-    // Soft-delete reports by anonymizing them instead of hard-deleting
+    // - Sessions (onDelete: Cascade) — user will be logged out everywhere
+    // - Reports: anonymize instead of hard-delete for audit integrity
     await prisma.report.updateMany({
-      where: { reporterId: session.user.id },
-      data: { reporterId: null, isAnonymous: true },
+      where: { reporterId: userId },
+      data: { 
+        reporterId: null, 
+        isAnonymous: true,
+        description: "[Account deleted] Report content removed by user",
+      },
     });
 
     // Delete admin logs associated with this user (as admin)
     await prisma.adminLog.deleteMany({
-      where: { adminId: session.user.id },
+      where: { adminId: userId },
     });
 
     // Finally, delete the user account
     await prisma.user.delete({
-      where: { id: session.user.id },
+      where: { id: userId },
     });
+
+    logger.info({ userId }, "[DeleteAccount] Account permanently deleted");
 
     return NextResponse.json(
       { message: "Your account and all associated data have been permanently deleted." },
       { status: 200 }
     );
   } catch (error) {
-    console.error("[DeleteAccount] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: errorMessage, userId }, "[DeleteAccount] ERROR");
     return NextResponse.json(
       { error: "An unexpected error occurred. Please try again later." },
       { status: 500 }

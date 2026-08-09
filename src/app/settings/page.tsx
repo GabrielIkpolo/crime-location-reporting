@@ -247,7 +247,8 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        toast.success("Password changed successfully!");
+        const data = await response.json();
+        toast.success(data.message || "Password changed successfully!");
         setShowChangePassword(false);
         setChangePasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
@@ -281,7 +282,8 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        toast.success("Account deleted successfully.");
+        const data = await response.json();
+        toast.success(data.message || "Account deleted successfully.");
         // Sign out and redirect to home
         await fetch("/api/auth/signout", { method: "POST" });
         window.location.href = "/";
