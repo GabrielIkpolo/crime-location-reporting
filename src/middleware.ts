@@ -106,14 +106,23 @@ export default function middleware(req: NextRequest) {
   // The actual auth/session validation happens on the client side via SessionProvider
   // and server-side API routes via the full NextAuth instance.
   if (isAdminRoute) {
-    // NextAuth v5 can set different cookie names depending on context:
-    // - __Host-next-auth.session.token (default, requires secure context)
-    // - __Secure-next-auth.session-token (alternative prefix)
-    // - next-auth.session.token (dev mode over HTTP, no prefix)
-    const hasSessionToken = req.cookies.has("__Host-next-auth.session.token") ||
-                            req.cookies.has("__Secure-next-auth.session-token") ||
-                            req.cookies.has("next-auth.session.token");
-    
+    // NextAuth v5 beta.31 (@auth/core@0.41.2) uses these cookie names:
+    // - authjs.session-token          (HTTP / localhost dev)
+    // - __Secure-authjs.session-token (HTTPS / production, when useSecureCookies=true)
+    // Cookies may also be chunked with numeric suffixes: .0, .1, etc.
+    let hasSessionToken = false;
+    for (const [name] of req.cookies) {
+      if (
+        name === "authjs.session-token" ||
+        name.startsWith("authjs.session-token.") ||
+        name === "__Secure-authjs.session-token" ||
+        name.startsWith("__Secure-authjs.session-token.")
+      ) {
+        hasSessionToken = true;
+        break;
+      }
+    }
+
     if (!hasSessionToken) {
       return NextResponse.redirect(new URL("/login", req.nextUrl));
     }
