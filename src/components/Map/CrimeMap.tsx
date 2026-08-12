@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet.markercluster";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { sanitizeHTML } from "@/lib/utils-security";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -37,6 +37,7 @@ interface CrimeMapProps {
   mode: "view" | "pick";
   initialPos?: [number, number];
   center?: [number, number];
+  zoom?: number;
   onLocationSelect?: (pos: [number, number]) => void;
   reports?: Report[];
   communityAlerts?: CommunityAlert[];
@@ -52,28 +53,79 @@ function LocationMarker({ onLocationSelect }: { onLocationSelect: (pos: [number,
   return null;
 }
 
-function MapController({ center }: { center: [number, number] }) {
+function MapController({ center, zoom }: { center: [number, number]; zoom?: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([center[1], center[0]], map.getZoom());
-  }, [center, map]);
+    const targetZoom = zoom ?? map.getZoom();
+    map.setView([center[1], center[0]], targetZoom);
+  }, [center, zoom, map]);
   return null;
 }
 
 function LocateButton({ onLocationSelect }: { onLocationSelect?: (pos: [number, number]) => void }) {
   const map = useMap();
-  const handleLocate = () => { map.locate({ setView: true, maxZoom: 16 }); };
+  const [locating, setLocating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLocate = () => {
+    if (navigator.geolocation) {
+      setLocating(true);
+      setError(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const latlng: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+          map.setView(latlng, 14); // Zoom to user's location at a good level
+          if (onLocationSelect) onLocationSelect(latlng);
+          setLocating(false);
+        },
+        (err) => {
+          let msg = "Unable to find your location";
+          if (err.code === err.PERMISSION_DENIED) {
+            msg = "Location access denied. Please enable GPS/location in your browser settings.";
+          } else if (err.code === err.TIMEOUT) {
+            msg = "Location request timed out. Please try again.";
+          }
+          setError(msg);
+          setLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } else {
+      setError("Geolocation is not supported by your browser.");
+    }
+  };
+
   useMapEvents({
     locationfound(e) {
       const pos: [number, number] = [e.latlng.lng, e.latlng.lat];
+      map.setView(pos, 14);
       if (onLocationSelect) onLocationSelect(pos);
+      setLocating(false);
     },
-    locationerror(e) { console.error("Unable to find location", e); },
+    locationerror() {
+      // Error already handled in handleLocate via getCurrentPosition
+    },
   });
+
   return (
-    <div className="absolute bottom-6 right-6 z-[1000]">
-      <Button onClick={handleLocate} className="rounded-full w-12 h-12 p-0 shadow-xl bg-background text-foreground hover:bg-accent">
-        <MapPin className="w-6 h-6" />
+    <div className="absolute bottom-6 right-6 z-[1000] flex flex-col items-end gap-2">
+      {error && (
+        <div className="bg-destructive/90 text-destructive-foreground text-xs px-3 py-2 rounded-lg shadow-lg max-w-[250px] animate-in fade-in slide-in-from-bottom-2">
+          {error}
+        </div>
+      )}
+      <Button
+        onClick={handleLocate}
+        disabled={locating}
+        className={`rounded-full w-12 h-12 p-0 shadow-xl transition-all ${
+          locating ? "animate-pulse bg-primary/80" : "bg-background text-foreground hover:bg-accent"
+        }`}
+      >
+        {locating ? (
+          <Loader2 className="w-6 h-6 animate-spin" />
+        ) : (
+          <MapPin className="w-6 h-6" />
+        )}
       </Button>
     </div>
   );
@@ -213,7 +265,7 @@ function CommunityAlertLayer({ alerts, selectedAlertId }: { alerts: CommunityAle
   return null;
 }
 
-export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, onLocationSelect, reports = [], communityAlerts = [], selectedReportId }: CrimeMapProps) {
+export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, zoom, onLocationSelect, reports = [], communityAlerts = [], selectedReportId }: CrimeMapProps) {
   const [position, setPosition] = useState<[number, number]>(initialPos);
 
   // Update position when center prop changes (from card clicks)
@@ -245,9 +297,9 @@ export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, 
 
   return (
     <div className="relative w-full h-full">
-      <MapContainer center={[displayPosition[1], displayPosition[0]]} zoom={13} style={{ height: "100%", width: "100%" }}>
+      <MapContainer center={[displayPosition[1], displayPosition[0]]} zoom={zoom ?? 13} style={{ height: "100%", width: "100%" }}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <MapController center={displayPosition} />
+        <MapController center={displayPosition} zoom={zoom} />
         <LocateButton onLocationSelect={(pos) => {
           setPosition(pos);
           if (onLocationSelect) onLocationSelect(pos);

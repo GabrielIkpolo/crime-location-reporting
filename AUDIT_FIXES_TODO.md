@@ -48,6 +48,44 @@
 - **Issue**: No limit on request body size — large payloads could cause DoS
 - **Fix**: Set `bodySize` in Next.js config + middleware check
 
+## Phase 5 — Bug Fixes (Just Completed) ✅
+
+### 18. Fix verified reports not showing on map ✅
+- **Issue**: API returned `totalVerified: 7` but `verified: []` (empty array). The count query worked but findMany returned nothing.
+- **Root Cause #1** (Date filter): `thirtyDaysAgo` was computed using `new Date(); thirtyDaysAgo.setDate(...)` which caused timezone/UTC conversion issues with MongoDB's date comparison. The aggregation engine (count) and query engine (findMany) handled the mutated Date object differently.
+- **Root Cause #2** (Proximity filter — THE REAL BUG): Proximity search params defaulted to `nearLat=0, nearLng=0` when no location was provided. Since `!isNaN(0)` is `true`, the proximity filter ALWAYS ran — filtering all reports by distance from `(0,0)` in the Gulf of Guinea off West Africa. None of the Nigerian reports are within 50km of that point!
+- **Fix**:
+  - Replaced date calculation with `new Date(Date.now() - decayDays * 24 * 60 * 60 * 1000)` to avoid mutation
+  - Changed proximity params to default to `NaN` instead of `0`, using `url.searchParams.has()` to detect when location was actually provided
+  - Added `nearLat !== 0 && nearLng !== 0` check as extra safety guard
+
+### 19. Fix Nigeria View button not zooming out ✅
+- **Issue**: Clicking "Nigeria View" only changed the map center but kept `zoom={13}` (very zoomed in). Users couldn't see an overview of all of Nigeria.
+- **Root Cause**: 
+  - `MapController` used `map.setView([center[1], center[0]], map.getZoom())` — preserving current zoom
+  - No `zoom` prop existed on CrimeMap component
+  - MapContainer was hardcoded with `zoom={13}`
+- **Fix**:
+  - Added `zoom?: number` prop to CrimeMap interface
+  - Updated MapController to accept and use the zoom parameter: `map.setView([center[1], center[0]], targetZoom)`
+  - Added `mapZoom` state in map/page.tsx alongside `mapCenter`
+  - Nigeria View button now sets both center AND zoom (zoom=6 for full country view)
+  - Card clicks set zoom=13 to zoom into specific report locations
+  - Default zoom remains 13 when no explicit zoom is provided
+
+### 20. Fix Locate Me button not working ✅
+- **Issue**: "Locate Me" button didn't provide user feedback on failure, and geolocation often failed silently (especially on localhost without HTTPS).
+- **Root Cause**:
+  - `locationerror` only logged to console — no visible error message
+  - No loading state while locating
+  - Browser geolocation requires HTTPS or localhost; when denied, users got no feedback
+- **Fix**:
+  - Replaced `map.locate()` with direct `navigator.geolocation.getCurrentPosition()` for better control
+  - Added proper error handling with user-friendly messages (permission denied, timeout, not supported)
+  - Added loading spinner animation while locating
+  - Added visible error toast that appears when geolocation fails
+  - Both the map-page button and in-map LocateButton now set zoom=14 on success for a good view of the user's area
+
 ## Phase 4 — Nice-to-Have (Deferred)
 
 13. Email verification flow after registration

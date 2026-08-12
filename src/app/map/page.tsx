@@ -15,7 +15,7 @@ const CrimeMap = dynamic(() => import("@/components/Map/CrimeMap"), {
 });
 
 // Nigeria bounding box for overview
-const NIGERIA_CENTER: [number, number] = [8.6753, 6.0]; // Center of Nigeria
+const NIGERIA_CENTER: [number, number] = [9.0820, 8.6753]; // Center of Nigeria (lat, lng)
 const NIGERIA_ZOOM = 6; // Zoom level to show all of Nigeria
 
 type CardType = "verified" | "crowd";
@@ -26,6 +26,7 @@ export default function PublicMapPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, highRisk: 0, crowdAlerts: 0 });
   const [mapCenter, setMapCenter] = useState<[number, number]>(NIGERIA_CENTER);
+  const [mapZoom, setMapZoom] = useState<number>(NIGERIA_ZOOM);
   const [activeTab, setActiveTab] = useState<CardType>("verified");
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showCrowdAlerts, setShowCrowdAlerts] = useState(true);
@@ -79,7 +80,7 @@ export default function PublicMapPage() {
       } catch {
         // Silently ignore background refresh failures
       }
-    }, 5 * 60 * 1000);
+    }, 20 * 1000);
 
     return () => {
       mounted = false;
@@ -90,6 +91,7 @@ export default function PublicMapPage() {
   const handleCardClick = useCallback((type: CardType, id: string, coordinates: [number, number]) => {
     setSelectedCardId(id);
     setMapCenter(coordinates);
+    setMapZoom(13); // Zoom in to report location when clicking a card
     
     // Scroll to map on mobile
     if (typeof window !== 'undefined') {
@@ -132,7 +134,10 @@ export default function PublicMapPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setMapCenter(NIGERIA_CENTER)}
+                onClick={() => {
+                  setMapCenter(NIGERIA_CENTER);
+                  setMapZoom(NIGERIA_ZOOM);
+                }}
                 className="gap-1 h-8 px-3 text-xs"
               >
                 <ZoomIn className="w-3 h-3" />
@@ -144,10 +149,25 @@ export default function PublicMapPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  if (!navigator.geolocation) {
+                    alert("Geolocation is not supported by your browser.");
+                    return;
+                  }
                   navigator.geolocation.getCurrentPosition(
-                    (pos) => setMapCenter([pos.coords.longitude, pos.coords.latitude]),
-                    () => {},
-                    { enableHighAccuracy: true }
+                    (pos) => {
+                      setMapCenter([pos.coords.longitude, pos.coords.latitude]);
+                      setMapZoom(14); // Zoom to user's location
+                    },
+                    (err) => {
+                      let msg = "Unable to find your location";
+                      if (err.code === err.PERMISSION_DENIED) {
+                        msg = "Location access denied. Please enable GPS/location in your browser settings.";
+                      } else if (err.code === err.TIMEOUT) {
+                        msg = "Location request timed out. Please try again.";
+                      }
+                      alert(msg);
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                   );
                 }}
                 className="gap-1 h-8 px-3 text-xs"
@@ -216,6 +236,7 @@ export default function PublicMapPage() {
                   reports={verifiedReports} 
                   communityAlerts={showCrowdAlerts ? communityAlerts : []} 
                   center={mapCenter}
+                  zoom={mapZoom}
                   selectedReportId={selectedCardId || undefined}
                 />
               </div>

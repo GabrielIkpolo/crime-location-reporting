@@ -143,9 +143,9 @@ export async function GET(req: Request) {
     const status = url.searchParams.get("status") || undefined;
     const riskLevel = url.searchParams.get("riskLevel") || undefined;
 
-    // Proximity search params
-    const nearLat = parseFloat(url.searchParams.get("nearLat") || "0");
-    const nearLng = parseFloat(url.searchParams.get("nearLng") || "0");
+    // Proximity search params — default to NaN so we can detect when no location was provided
+    const nearLat = url.searchParams.has("nearLat") && url.searchParams.get("nearLat") !== null ? parseFloat(url.searchParams.get("nearLat")!) : NaN;
+    const nearLng = url.searchParams.has("nearLng") && url.searchParams.get("nearLng") !== null ? parseFloat(url.searchParams.get("nearLng")!) : NaN;
     const radiusKm = parseFloat(url.searchParams.get("radiusKm") || "50");
 
     // Fetch dynamic settings
@@ -155,8 +155,8 @@ export async function GET(req: Request) {
 
     // Data Decay: Only show reports from the last N days for public view
     const decayDays = parseInt(settingsMap.DECAY_DAYS || "30");
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - decayDays);
+    // Use Date.now() arithmetic instead of setDate() to avoid timezone/UTC conversion issues with MongoDB
+    const thirtyDaysAgo = new Date(Date.now() - decayDays * 24 * 60 * 60 * 1000);
 
     // Build where clause for verified reports
     const verifiedWhere: any = { 
@@ -263,9 +263,9 @@ export async function GET(req: Request) {
       }
     }
 
-    // 4. Apply proximity filter if nearLat/nearLng provided
+    // 4. Apply proximity filter ONLY when actual coordinates are provided (not defaults)
     let filteredVerified = verifiedReports;
-    if (!isNaN(nearLat) && !isNaN(nearLng) && radiusKm > 0) {
+    if (!isNaN(nearLat) && !isNaN(nearLng) && nearLat !== 0 && nearLng !== 0 && radiusKm > 0) {
       filteredVerified = verifiedReports.filter((report) => {
         const loc = report.location as unknown as GeoJSONPoint;
         if (!loc || !loc.coordinates) return false;
@@ -307,7 +307,7 @@ export async function GET(req: Request) {
     });
     response.headers.set(
       "Cache-Control",
-      "public, s-maxage=300, stale-while-revalidate=600"
+      "public, s-maxage=5, stale-while-revalidate=20"
     );
     return response;
   } catch (error) {
