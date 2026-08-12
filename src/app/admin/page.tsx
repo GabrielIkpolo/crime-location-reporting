@@ -12,14 +12,21 @@ const AdminHeatmap = dynamic(() => import("@/components/Map/AdminHeatmap"), {
   loading: () => <div className="h-full w-full flex items-center justify-center bg-muted">Loading Analytics...</div>
 });
 
+// Import chart components (placeholder structure ready for Recharts)
+import ReportTrendsChart from "@/components/admin/charts/ReportTrendsChart";
+import StatusDistributionChart from "@/components/admin/charts/StatusDistributionChart";
+import RiskLevelChart from "@/components/admin/charts/RiskLevelChart";
+import CrimeTypeChart from "@/components/admin/charts/CrimeTypeChart";
+
 export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [filter, setFilter] = useState<"all" | "PENDING" | "VERIFIED" | "HIGH">("all");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch("/api/admin/reports");
+        const res = await fetch("/api/admin/reports?limit=1000");
         const data = await res.json();
         if (data && Array.isArray(data.reports)) {
           setReports(data.reports);
@@ -28,6 +35,8 @@ export default function AdminPage() {
         }
       } catch (err) {
         console.error("Failed to fetch reports", err);
+      } finally {
+        setLoading(false);
       }
     }
     fetchReports();
@@ -39,9 +48,16 @@ export default function AdminPage() {
     return r.status === filter;
   });
 
+  // Calculate stats
+  const totalReports = reports.length;
+  const pendingCount = reports.filter((r) => r.status === "PENDING").length;
+  const verifiedCount = reports.filter((r) => r.status === "VERIFIED").length;
+  const highRiskCount = reports.filter((r) => r.riskLevel === "HIGH").length;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      {/* Header */}
+      <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Command Center</h1>
           <p className="text-muted-foreground">Real-time overview of crime reports and hotspots.</p>
@@ -53,13 +69,49 @@ export default function AdminPage() {
         )}
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Reports" value={(reports?.length || 0).toString()} trend="+12%" color="blue" onClick={() => setFilter("all")} />
-        <StatCard title="Pending Verification" value={(reports?.filter((r) => r.status === "PENDING").length || 0).toString()} trend="Urgent" color="amber" onClick={() => setFilter("PENDING")} />
-        <StatCard title="Verified Incidents" value={(reports?.filter((r) => r.status === "VERIFIED").length || 0).toString()} trend="+5%" color="green" onClick={() => setFilter("VERIFIED")} />
-        <StatCard title="High Risk Reports" value={(reports?.filter((r) => r.riskLevel === "HIGH").length || 0).toString()} trend="Critical" color="red" onClick={() => setFilter("HIGH")} />
+        <StatCard 
+          title="Total Reports" 
+          value={totalReports.toString()} 
+          trend="+12%" 
+          color="blue" 
+          onClick={() => setFilter("all")} 
+        />
+        <StatCard 
+          title="Pending Verification" 
+          value={pendingCount.toString()} 
+          trend="Urgent" 
+          color="amber" 
+          onClick={() => setFilter("PENDING")} 
+        />
+        <StatCard 
+          title="Verified Incidents" 
+          value={verifiedCount.toString()} 
+          trend="+5%" 
+          color="green" 
+          onClick={() => setFilter("VERIFIED")} 
+        />
+        <StatCard 
+          title="High Risk Reports" 
+          value={highRiskCount.toString()} 
+          trend="Critical" 
+          color="red" 
+          onClick={() => setFilter("HIGH")} 
+        />
       </div>
 
+      {/* Charts Section */}
+      {!loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ReportTrendsChart />
+          <StatusDistributionChart />
+          <RiskLevelChart />
+          <CrimeTypeChart />
+        </div>
+      )}
+
+      {/* Map and Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 h-[500px] bg-muted rounded-xl border overflow-hidden shadow-inner relative p-4">
           <div className="absolute top-8 left-8 z-[1000] bg-background/80 backdrop-blur px-3 py-1 rounded-full border text-xs font-medium shadow-sm">
@@ -69,7 +121,7 @@ export default function AdminPage() {
         </div>
         <div className="bg-card rounded-xl border p-6 space-y-4">
           <h3 className="font-semibold text-lg">Recent Activity</h3>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             {reports.slice(0, 5).map((report, i) => (
               <div key={i} className="flex items-start gap-3 text-sm border-b pb-2 last:border-0">
                 <div className={cn(
