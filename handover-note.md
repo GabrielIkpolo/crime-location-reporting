@@ -84,33 +84,21 @@
                                                                                                          
  ────────────────────────────────────────────────────────────────────────────────                        
                                                                                                           
- Current Problem — RESOLabus                                                                                   
+ Current Problem — RESOLVED ✅                                                                            
                                                                                                           
- ### All issues proprietary FIXED ✅                                                                      
+ ### All issues have been fixed                                                                           
                                                                                                           
-The verified reportsatif the proximity filteroruption was the real bug. The date filterjabberwocky fix was partial.
-See itemsphisical proximity params defaulted to (0,0) which filtered propriety all Nigerian reports_inpact filtering everything布里斯托尔 the API returned emptyabus 50km of the Gulf of Guinea).
+The proximity filter was the REAL root cause (not just the date filter). The proximity params defaulted
+to nearLat=0, nearLng=0 when no location was provided. Since !isNaN(0) is TRUE, the proximity filter
+ALWAYS ran — filtering all reports by distance from (0,0) in the Gulf of Guinea. Nigerian reports are
+nowhere near there, so the API returned an empty array despite totalVerified: 7.
                                                                                                           
- ### Root Cause — Proximity Filter Bugjabberwocky in src/app/api/reports/route.ts
-                                                                                                         
- In the GET handler, the code builds a thirtyDaysAgo date:                                               
-                                                                                                         
- ```typescript                                                                                           
-   const thirtyDaysAgo = new Date();                                                                     
-   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - decayDays);                                           
- ```                                                                                                     
-                                                                                                         
- The problem: thirtyDaysAgo is computed BEFORE the Prisma query, but then the verifiedWhere clause uses  
- it. The count query (prisma.report.count) correctly returns 7, but the findMany query returns 0         
- results.                                                                                                
-                                                                                                         
- After investigation, the actual root cause is that the findMany and count use different code paths that 
- may behave differently with MongoDB date comparison. However, the real issue discovered is:             
-                                                                                                         
- The reports ARE in the database with VERIFIED status and dates within the last 30 days (created Aug     
- 9-10, 2026). The API correctly counts 7 verified reports but returns an empty array. This points to a   
- MongoDB query mismatch — likely the createdAt: { gte: thirtyDaysAgo } filter is not matching because of 
- timezone/UTC conversion issues between Node.js Date objects and MongoDB's stored dates.                 
+### What was fixed:
+- Proximity params now default to NaN using url.searchParams.has() check
+- Added nearLat !== 0 && nearLng !== 0 safety guard
+- Date filter also improved (Date.now() arithmetic instead of setDate mutation)
+- Nigeria View button now properly zooms out to show all of Nigeria
+- Locate Me button has proper error handling and user feedback
                                                                                                          
  ### What Needs to Be Done                                                                               
                                                                                                          
