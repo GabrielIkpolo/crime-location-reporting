@@ -102,62 +102,19 @@ nowhere near there, so the API returned an empty array despite totalVerified: 7.
                                                                                                          
  ### What Needs to Be Done                                                                               
                                                                                                          
- Priority 1 — Fix the verified reports query in src/app/api/reports/route.ts:                            
- - The GET handler at line ~100 builds verifiedWhere with { status: "VERIFIED", createdAt: { gte:        
-   thirtyDaysAgo } }.                                                                                    
- - The prisma.report.count({ where: verifiedWhere }) returns 7 (correct).                                
- - The prisma.report.findMany({ where: verifiedWhere, ... }) returns [] (empty).                         
- - This is a Prisma/MongoDB driver mismatch — the count aggregation and findMany are handling the date   
-   filter differently.                                                                                   
- - Fix: Remove the createdAt filter from verifiedWhere temporarily to confirm, then fix the date         
-   comparison. Alternatively, use new Date(Date.now() - decayDays * 24 * 60 * 60 * 1000) instead of      
-   mutating a new Date() object. The setDate() mutation may be causing timezone issues.                  
-                                                                                                         
- Priority 2 — Verify the map page consumes the API correctly:                                            
- - src/app/map/page.tsx fetches /api/reports and uses data.verified for the map markers.                 
- - Once the API returns verified reports, the map should display them.                                   
- - The page also has a 5-minute polling interval that refreshes data.                                    
-                                                                                                         
- Priority 3 — Test full user flow:                                                                       
- 1. Login as admin → should access /admin ✅ (already fixed)                                             
- 2. Admin verifies reports → status changes to VERIFIED                                                  
- 3. Visit /map → verified reports should appear on map and in sidebar                                    
- 4. Visit /my-reports → user's own reports should appear                                                 
-                                                                                                         
- ────────────────────────────────────────────────────────────────────────────────                        
-                                                                                                         
- Key Files to Look At                                                                                    
-                                                                                                         
- ┌───────────────────────────────┬─────────────────────────────────────────────────────────────────────┐ 
- │ File                          │ Purpose                                                             │ 
+  ────────────────────────────────────────────────────────────────────────────────                        
+                                                                                                          
+ Key Files Modified (This Session)                                                                        
+                                                                                                          
+ │ File                          │ Change                                                              │ 
  ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/middleware.ts             │ Route protection + security headers (ALREADY FIXED — cookie-based   │ 
- │                               │ check)                                                              │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/auth.ts                   │ Full NextAuth config with Prisma adapter + callbacks                │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/auth.config.ts            │ Shared auth config (Google + Credentials providers, JWT callbacks)  │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/auth.middleware.ts        │ Edge-only minimal auth instance (NO credentials provider — Prisma   │ 
- │                               │ can't run in edge)                                                  │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/auth.middleware.config.ts │ Edge-only config (Google only, role passed from JWT cookie)         │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/app/api/reports/route.ts  │ BUG HERE — GET handler, verifiedWhere date filter issue             │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/app/map/page.tsx          │ Public map page — fetches /api/reports, displays verified reports   │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/app/admin/page.tsx        │ Admin dashboard                                                     │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ src/app/login/page.tsx        │ Login page — uses signIn("credentials", { redirect: false })        │ 
- ├───────────────────────────────┼─────────────────────────────────────────────────────────────────────┤ 
- │ prisma/schema.prisma          │ Database schema with all models                                     │ 
+ │ src/app/api/reports/route.ts  │ Fixed proximity filter defaulting to (0,0); improved date calc     │ 
+ │ src/components/Map/CrimeMap.tsx│ Added zoom prop; improved LocateButton with error handling        │ 
+ │ src/app/map/page.tsx          │ Added mapZoom state; updated Nigeria View & Locate Me buttons      │ 
  └───────────────────────────────┴─────────────────────────────────────────────────────────────────────┘ 
-                                                                                                         
- ────────────────────────────────────────────────────────────────────────────────                        
-                                                                                                         
+                                                                                                          
  Tech Stack & Environment                                                                                
-                                                                                                         
+                                                                                                          
  - Next.js 16.2.10 (Turbopack)                                                                           
  - React 19                                                                                              
  - next-auth 5.0.0-beta.31 (@auth/core@0.41.2)                                                           
@@ -165,25 +122,4 @@ nowhere near there, so the API returned an empty array despite totalVerified: 7.
  - Leaflet for maps                                                                                      
  - Tailwind CSS 4 + Shadcn UI                                                                            
  - Node.js 24                                                                                            
- - Development: http://localhost:3000                                                                    
-                                                                                                         
- ────────────────────────────────────────────────────────────────────────────────                        
-                                                                                                         
- Quick Fix Suggested                                                                                     
-                                                                                                         
- In src/app/api/reports/route.ts, the GET handler's verifiedWhere clause. Try replacing:                 
-                                                                                                         
- ```typescript                                                                                           
-   const thirtyDaysAgo = new Date();                                                                     
-   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - decayDays);                                           
- ```                                                                                                     
-                                                                                                         
- With:                                                                                                   
-                                                                                                         
- ```typescript                                                                                           
-   const thirtyDaysAgo = new Date(Date.now() - decayDays * 24 * 60 * 60 * 1000);                         
- ```                                                                                                     
-                                                                                                         
- Or temporarily remove the createdAt filter from verifiedWhere to confirm that's the issue, then add     
- back a properly constructed date. The count vs findMany discrepancy is the smoking gun — it means the   
- filter predicate is being interpreted differently by MongoDB's aggregation engine vs. query engine.  
+ - Development: http://localhost:3000
