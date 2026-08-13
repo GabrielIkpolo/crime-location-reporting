@@ -46,13 +46,18 @@ interface MailAttachment {
 }
 
 /**
+ * Recipient type — supports plain strings or objects with address/name/email
+ */
+type Recipient = string | { address: string; name?: string; email?: string };
+
+/**
  * Nodemailer-compatible mail options
  */
 export interface MailOptions {
   from?: string | FromAddress;
-  to: string | string[] | { address: string; name?: string; email?: string } | { address: string; name?: string; email?: string }[];
-  cc?: string | string[] | { address: string; name?: string; email?: string } | { address: string; name?: string; email?: string }[];
-  bcc?: string | string[] | { address: string; name?: string; email?: string } | { address: string; name?: string; email?: string }[];
+  to: Recipient | Recipient[];
+  cc?: Recipient | Recipient[];
+  bcc?: Recipient | Recipient[];
   subject: string;
   text?: string;
   html?: string;
@@ -100,12 +105,7 @@ class GikpsMailTransporter {
       return { name: this.fromName, address: this.fromAddress };
     }
 
-    if (typeof from === "object" && !("address" in from)) {
-      // It's a plain string that looks like an object due to type union
-      const str = from as unknown as string;
-      return this.parseFromString(str);
-    }
-
+    // Check if it's a string (not an object with 'address' property)
     if (typeof from === "string") {
       return this.parseFromString(from);
     }
@@ -133,15 +133,13 @@ class GikpsMailTransporter {
   /**
    * Normalize recipients to an array of email addresses.
    */
-  private normalizeRecipients(
-    recipients?: string | string[] | { address: string; name?: string; email?: string }
-  ): string[] {
+  private normalizeRecipients(recipients?: Recipient | Recipient[]): string[] {
     if (!recipients) return [];
 
     const arr = Array.isArray(recipients) ? recipients : [recipients];
     return arr.map((r): string => {
       if (typeof r === "string") return r;
-      return (r as { address: string; email?: string }).address || (r as { address: string; email?: string }).email || "";
+      return r.address || r.email || "";
     }).filter(Boolean);
   }
 
@@ -207,10 +205,13 @@ class GikpsMailTransporter {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
         const message = error.response?.data?.error || error.message;
-        throw new Error(`GikpsMail Transport Error: ${message}`);
+        console.error(`[GikpsMail] HTTP ${status}: ${message}`);
+        throw new Error(`GikpsMail Transport Error (HTTP ${status}): ${message}`);
       }
-      throw error;
+      console.error("[GikpsMail] Unexpected error:", error);
+      throw new Error(`GikpsMail Transport Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
