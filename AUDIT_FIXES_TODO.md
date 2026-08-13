@@ -108,8 +108,18 @@
   2. Provide your GikpsMail adapter code
   3. Uncomment the email sending calls in the placeholder service
 
-### 14. Admin dashboard charts (Recharts) ✅ PLACEHOLDER STRUCTURE READY
-- **Status**: Chart components created with data fetching logic, ready for Recharts integration
+### 14. Admin dashboard charts (Recharts) ✅ COMPLETE
+- **Status**: Fully implemented and working — all 4 chart components activated
+- **Files Modified**:
+  - `src/components/admin/charts/ReportTrendsChart.tsx` — Line chart with Recharts, showing total/verified/pending trends over last 30 days
+  - `src/components/admin/charts/StatusDistributionChart.tsx` — Pie/donut chart with Recharts, showing status breakdown (PENDING, VERIFIED, REJECTED)
+  - `src/components/admin/charts/RiskLevelChart.tsx` — Bar chart with Recharts, showing HIGH/MEDIUM/LOW risk distribution
+  - `src/components/admin/charts/CrimeTypeChart.tsx` — Horizontal bar chart with Recharts, showing top crime types
+- **Features**:
+  - All charts fetch real data from `/api/admin/reports`
+  - Styled with theme-aware colors (hsl variables)
+  - Custom tooltips with dark/light mode support
+  - Responsive containers that adapt to screen size
 - **Files Created**:
   - `src/components/admin/charts/ReportTrendsChart.tsx` — Line chart showing reports over time
   - `src/components/admin/charts/StatusDistributionChart.tsx` — Donut/pie chart for status breakdown

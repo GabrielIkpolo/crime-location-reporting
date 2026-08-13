@@ -221,7 +221,7 @@ export default function ReportsQueuePage() {
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Select onValueChange={(val) => setShowBulkConfirm({ action: "approve", riskLevel: val })}>
+              <Select onValueChange={(value: string | null) => setShowBulkConfirm({ action: "approve", riskLevel: value || undefined })}>
                 <SelectTrigger className="w-[180px] h-9">
                   <SelectValue placeholder="Set Risk Level" />
                 </SelectTrigger>

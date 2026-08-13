@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
  */
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Cell } from 'recharts';
 
 interface TrendDataPoint {
   date: string;
@@ -84,35 +85,59 @@ export default function ReportTrendsChart() {
             <div className="text-muted-foreground">No report data available</div>
           </div>
         ) : (
-          /* 
-           * TODO: Replace this placeholder with Recharts when installed.
-           * 
-           * Example implementation:
-           * 
-           * <ResponsiveContainer width="100%" height={300}>
-           *   <LineChart data={data}>
-           *     <CartesianGrid strokeDasharray="3 3" />
-           *     <XAxis dataKey="date" tickFormatter={(val) => val.slice(5)} />
-           *     <YAxis />
-           *     <Tooltip />
-           *     <Legend />
-           *     <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total Reports" />
-           *     <Line type="monotone" dataKey="verified" stroke="#82ca9d" name="Verified" />
-           *     <Line type="monotone" dataKey="pending" stroke="#ff7300" name="Pending" />
-           *   </LineChart>
-           * </ResponsiveContainer>
-           */
-          <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg p-4">
-            <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">📈 Chart Placeholder</p>
-              <p className="text-xs text-muted-foreground">
-                Install recharts to enable this chart:
-              </p>
-              <code className="block bg-muted px-3 py-1 rounded text-xs mt-2">
-                pnpm add recharts
-              </code>
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(val) => {
+                  const d = new Date(val);
+                  return `${d.getMonth()+1}/${d.getDate()}`;
+                }}
+                className="text-xs"
+              />
+              <YAxis className="text-xs" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+                labelFormatter={(label) => {
+                  if (!label) return '';
+                  const d = new Date(Number(label));
+                  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="total" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={2}
+                name="Total Reports"
+                dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="verified" 
+                stroke="#22c55e" 
+                strokeWidth={2}
+                name="Verified"
+                dot={{ r: 3 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="pending" 
+                stroke="#f59e0b" 
+                strokeWidth={2}
+                name="Pending"
+                dot={{ r: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         )}
 
         {/* Summary Stats */}

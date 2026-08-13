@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useState, useEffect } from "react";
 
 /**
@@ -78,31 +79,26 @@ export default function RiskLevelChart() {
             <div className="text-muted-foreground">No report data available</div>
           </div>
         ) : (
-          /* 
-           * TODO: Replace this placeholder with Recharts when installed.
-           * 
-           * Example implementation:
-           * 
-           * <ResponsiveContainer width="100%" height={300}>
-           *   <BarChart data={data}>
-           *     <CartesianGrid strokeDasharray="3 3" />
-           *     <XAxis dataKey="name" />
-           *     <YAxis />
-           *     <Tooltip />
-           *     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-           *       {data.map((entry, index) => (
-           *         <Cell key={`cell-${index}`} fill={entry.color} />
-           *       ))}
-           *     </Bar>
-           *   </BarChart>
-           * </ResponsiveContainer>
-           */
-          <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg p-4">
-            <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">📊 Chart Placeholder</p>
-              <p className="text-xs text-muted-foreground">Install recharts to enable this chart</p>
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="name" className="text-xs" />
+              <YAxis className="text-xs" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
 
         {/* Risk Level Bars */}

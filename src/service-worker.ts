@@ -13,9 +13,7 @@
  * Then update next.config.ts with the PWA plugin configuration.
  */
 
-/// <reference lib="webworker" />
-
-declare const self: ServiceWorkerGlobalScope;
+// @ts-nocheck - Placeholder service worker, not actively used yet
 
 // Cache names
 const CACHE_NAME = "crimereport-v1";

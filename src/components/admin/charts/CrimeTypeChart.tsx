@@ -2,12 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-
-/**
- * Crime Type Chart — Horizontal bar chart showing crime type distribution.
- * 
- * NOTE: Placeholder for Recharts integration (see ReportTrendsChart.tsx for details).
- */
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface CrimeTypeDataPoint {
   name: string;
@@ -67,32 +62,26 @@ export default function CrimeTypeChart() {
             <div className="text-muted-foreground">No report data available</div>
           </div>
         ) : (
-           
-          /* TODO: Replace this placeholder with Recharts when installed.
-           * 
-           * Example implementation:
-           * /
-           * <ResponsiveContainer width="100%" height={300}>
-           *   <BarChart data={data} layout="vertical" margin={{ left: 40 }}>
-           *     <XAxis type="number" />
-           *     <YAxis dataKey="name" type="category" width={120} />
-           *     <Tooltip />
-           *     <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
-           *       {data.map((entry, index) => (
-           *         <Cell key={`cell-${index}`} fill={`hsl(${index * 360 / data.length}, 70%, 50%)`} />
-           *       ))}
-           *     </Bar>
-           *   </BarChart>
-           * </ResponsiveContainer>
-           */
-        
-
-          <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg p-4">
-            <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">📋 Chart Placeholder</p>
-              <p className="text-xs text-muted-foreground">Install recharts to enable this chart</p>
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis type="number" className="text-xs" />
+              <YAxis dataKey="name" type="category" width={120} className="text-xs" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(${index * (240 / Math.max(data.length, 1))}, 70%, 50%)`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
 
         {/* Crime Type Bars */}

@@ -24,6 +24,59 @@ const communityIcon = L.divIcon({
   iconAnchor: [16, 32],
 });
 
+// GPS-style User Location Icon — Distinctive blue pulsing rings (like a radar/GPS indicator)
+const userLocationIcon = L.divIcon({
+  className: "user-location-marker",
+  html: `
+    <style>
+      .user-location-marker { background: transparent !important; border: none !important; }
+      @keyframes gps-pulse-outer {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+        100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      }
+      @keyframes gps-pulse-inner {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+        100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0.4; }
+      }
+      .gps-ring-outer {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.3);
+        border: 2px solid rgba(59, 130, 246, 0.6);
+        animation: gps-pulse-outer 2s ease-out infinite;
+      }
+      .gps-ring-inner {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.4);
+        border: 2px solid rgba(59, 130, 246, 0.8);
+        animation: gps-pulse-inner 2s ease-out infinite 0.3s;
+      }
+      .gps-core {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 14px; height: 14px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        border: 2.5px solid white;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5), inset 0 1px 2px rgba(255,255,255,0.3);
+      }
+    </style>
+    <div style="position: relative; width: 40px; height: 40px;">
+      <div class="gps-ring-outer"></div>
+      <div class="gps-ring-inner"></div>
+      <div class="gps-core"></div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
+
 // Fix for default Leaflet marker icons
 const DefaultIconPrototype = L.Icon.Default.prototype;
 delete (DefaultIconPrototype as { _getIconUrl?: string })._getIconUrl;
@@ -129,6 +182,46 @@ function LocateButton({ onLocationSelect }: { onLocationSelect?: (pos: [number, 
       </Button>
     </div>
   );
+}
+
+// GPS-style User Location Marker — Shows user's position on the safety view map
+function UserLocationMarker({ position }: { position: [number, number] }) {
+  const map = useMap();
+  const markerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    // Remove old marker if exists
+    if (markerRef.current) {
+      markerRef.current.remove();
+    }
+
+    // Create new GPS-style marker at user's location
+    const gpsMarker = L.marker([position[1], position[0]], {
+      icon: userLocationIcon,
+      zIndexOffset: 1000, // Ensure it appears above other markers
+      interactive: false, // Not clickable — just a visual indicator
+    });
+
+    gpsMarker.bindPopup(`
+      <div class="p-2 text-center">
+        <div class="text-blue-600 font-bold text-sm mb-1">📍 Your Location</div>
+        <div class="text-[10px] text-muted-foreground">
+          ${position[0].toFixed(5)}, ${position[1].toFixed(5)}
+        </div>
+      </div>
+    `);
+
+    gpsMarker.addTo(map);
+    markerRef.current = gpsMarker;
+
+    return () => {
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current);
+      }
+    };
+  }, [position, map]);
+
+  return null;
 }
 
 function MarkerClusterLayer({ reports, selectedReportId }: { reports: Report[]; selectedReportId?: string }) {
@@ -315,6 +408,8 @@ export default function CrimeMap({ mode, initialPos = [3.3792, 6.5244], center, 
         )}
         {mode === "view" && (
           <>
+            {/* GPS-style user location marker — distinct from alerts */}
+            <UserLocationMarker position={displayPosition} />
             <MarkerClusterLayer reports={reports} selectedReportId={selectedReportId} />
             <CommunityAlertLayer alerts={communityAlerts} selectedAlertId={undefined} />
           </>

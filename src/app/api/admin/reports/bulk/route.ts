@@ -105,11 +105,10 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Log the bulk operation itself
-    await logAdminAction(
-      session.user.id!,
-      null,
-      `Bulk ${action}: ${result.count} reports marked as ${newStatus}`
-    );
+    await logAdminAction({
+      adminId: session.user.id!,
+      action: `Bulk ${action}: ${result.count} reports marked as ${newStatus}`,
+    });
 
     return NextResponse.json({
       success: true,

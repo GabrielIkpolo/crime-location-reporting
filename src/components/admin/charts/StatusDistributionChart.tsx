@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useState, useEffect } from "react";
 
 /**
@@ -76,37 +77,35 @@ export default function StatusDistributionChart() {
             <div className="text-muted-foreground">No report data available</div>
           </div>
         ) : (
-          /* 
-           * TODO: Replace this placeholder with Recharts when installed.
-           * 
-           * Example implementation:
-           * 
-           * <ResponsiveContainer width="100%" height={300}>
-           *   <PieChart>
-           *     <Pie
-           *       data={data}
-           *       cx="50%"
-           *       cy="50%"
-           *       labelLine={false}
-           *       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-           *       outerRadius={80}
-           *       fill="#8884d8"
-           *       dataKey="value"
-           *     >
-           *       {data.map((entry, index) => (
-           *         <Cell key={`cell-${index}`} fill={entry.color} />
-           *       ))}
-           *     </Pie>
-           *     <Tooltip />
-           *   </PieChart>
-           * </ResponsiveContainer>
-           */
-          <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg p-4">
-            <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">🍩 Chart Placeholder</p>
-              <p className="text-xs text-muted-foreground">Install recharts to enable this chart</p>
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+                strokeWidth={2}
+                stroke="#fff"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         )}
 
         {/* Legend */}
