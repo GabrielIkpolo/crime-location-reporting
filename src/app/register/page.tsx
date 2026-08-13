@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageTransition } from "@/components/ui/PageTransition";
 
@@ -42,9 +42,17 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Account created successfully!", {
-          description: "You can now sign in to start reporting.",
-        });
+        const data = await response.json();
+        
+        if (data.needsVerification) {
+          toast.success("Account created! Check your email.", {
+            description: "We've sent a verification link to " + formData.email + ". Please verify before logging in.",
+          });
+        } else {
+          toast.success("Account created successfully!", {
+            description: "You can now sign in to start reporting.",
+          });
+        }
         router.push("/login");
         router.refresh();
       } else {

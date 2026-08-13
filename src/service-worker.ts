@@ -1,54 +1,47 @@
 /**
  * Service Worker for CrimeReport — Offline Support & Caching
  * 
- * This service worker provides:
- * - Caching of static assets (HTML, CSS, JS, images)
- * - API response caching for report data
- * - Offline fallback pages
+ * This service worker is managed by next-pwa. It provides:
+ * - Cache-first strategy for static assets (HTML, CSS, JS, images)
+ * - Network-first strategy for API requests with cache fallback
+ * - Stale-while-revalidate for pages
  * - Background sync for pending actions
  * 
- * NOTE: To activate this service worker, you need to install next-pwa:
- *   pnpm add next-pwa @types/swc-plugin-cache-kv
- * 
- * Then update next.config.ts with the PWA plugin configuration.
+ * NOTE: This file is used by next-pwa. The actual registration and caching
+ * strategies are configured in next.config.ts.
  */
 
-// @ts-nocheck - Placeholder service worker, not actively used yet
+// @ts-nocheck - Service worker context has different globals
 
-// Cache names
 const CACHE_NAME = "crimereport-v1";
 const API_CACHE_NAME = "crimereport-api-v1";
 const OFFLINE_PAGES = ["/", "/map", "/my-reports"];
 
 // ============================================================================
-// INSTALL — Pre-cache static assets
+// INSTALL — Pre-cache core pages and assets
 // ============================================================================
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
-        // Core pages
+        // Core pages for offline access
         "/",
         "/map",
         "/my-reports",
         "/login",
         "/register",
         "/report",
-        
-        // Key assets (adjust paths based on your build output)
-        "/_next/static/css/app.css",
-        "/_next/static/js/main.js",
       ]);
     })
   );
   
-  // Activate immediately
+  // Activate immediately without waiting
   self.skipWaiting();
 });
 
 // ============================================================================
-// ACTIVATE — Clean up old caches
+// ACTIVATE — Clean up old caches and take control
 // ============================================================================
 
 self.addEventListener("activate", (event) => {
@@ -67,7 +60,7 @@ self.addEventListener("activate", (event) => {
 });
 
 // ============================================================================
-// FETCH — Cache-first strategy for static assets, network-first for API
+// FETCH — Caching strategies based on request type
 // ============================================================================
 
 self.addEventListener("fetch", (event) => {
@@ -79,15 +72,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets
-  if (url.pathname.startsWith("/_next/") || 
-      url.pathname.startsWith("/api/admin/reports/bulk") ||
-      url.pathname.endsWith(".js") || 
-      url.pathname.endsWith(".css") ||
-      url.pathname.endsWith(".png") ||
-      url.pathname.endsWith(".jpg") ||
-      url.pathname.endsWith(".svg")) {
-    
+  // Strategy 1: Cache-first for static assets
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css") ||
+    /\.(png|jpg|jpeg|gif|svg|ico|woff2?)$/.test(url.pathname)
+  ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -95,7 +86,6 @@ self.addEventListener("fetch", (event) => {
         }
 
         return fetch(request).then((response) => {
-          // Clone the response before caching
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
@@ -103,20 +93,18 @@ self.addEventListener("fetch", (event) => {
           return response;
         }).catch(() => {
           // Return fallback for static assets if offline
-          return new Response("Offline", { status: 503 });
+          return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
         });
       })
     );
-
     return;
   }
 
-  // Network-first strategy for API requests (with cache fallback)
+  // Strategy 2: Network-first with cache fallback for API requests
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful responses
           const responseToCache = response.clone();
           caches.open(API_CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
@@ -128,15 +116,13 @@ self.addEventListener("fetch", (event) => {
           return caches.match(request);
         })
     );
-
     return;
   }
 
-  // Stale-while-revalidate for pages
+  // Strategy 3: Stale-while-revalidate for page navigation
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request).then((response) => {
-        // Update cache in background
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(request, responseToCache);
@@ -144,6 +130,7 @@ self.addEventListener("fetch", (event) => {
         return response;
       }).catch(() => cachedResponse);
 
+      // Return cached page immediately, update in background
       return cachedResponse || fetchPromise;
     })
   );
@@ -155,6 +142,8 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("message", (event) => {
   const data = event.data;
+
+  if (!data || !data.type) return;
 
   if (data.type === "CLEAR_CACHE") {
     caches.keys().then((cacheNames) => {
@@ -190,7 +179,6 @@ async function syncReports() {
   const pendingReports = await getPendingReports();
   
   if (pendingReports.length > 0) {
-    // Sync each pending report
     for (const report of pendingReports) {
       try {
         await fetch("/api/reports", {
@@ -202,7 +190,7 @@ async function syncReports() {
         // Remove from pending after successful sync
         await removePendingReport(report.id);
       } catch (error) {
-        console.error("Failed to sync report:", error);
+        console.error("[ServiceWorker] Failed to sync report:", error);
         break; // Stop on first failure, retry later
       }
     }
@@ -211,16 +199,28 @@ async function syncReports() {
 
 // Placeholder functions for IndexedDB operations
 async function getPendingReports(): Promise<any[]> {
-  // TODO: Implement IndexedDB storage for pending reports
-  return [];
+  try {
+    const stored = localStorage.getItem("crimereport-pending-reports");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
 }
 
 async function removePendingReport(id: string): Promise<void> {
-  // TODO: Remove from IndexedDB
+  try {
+    const stored = localStorage.getItem("crimereport-pending-reports");
+    if (stored) {
+      const reports = JSON.parse(stored).filter((r: any) => r.id !== id);
+      localStorage.setItem("crimereport-pending-reports", JSON.stringify(reports));
+    }
+  } catch {
+    // Silently fail
+  }
 }
 
 // ============================================================================
-// NOTIFICATION — Handle push notifications (future feature)
+// PUSH NOTIFICATIONS — Handle push notifications (future feature)
 // ============================================================================
 
 self.addEventListener("push", (event) => {
@@ -229,12 +229,16 @@ self.addEventListener("push", (event) => {
   const options: NotificationOptions = {
     body: data.body || "New crime report near you",
     icon: "/icon-192.png",
-    badge: "/badge-72.png",
+    badge: "/icon-72.png",
     vibrate: [200, 100, 200],
     data: {
       url: data.url || "/",
       timestamp: Date.now(),
     },
+    actions: [
+      { action: "view", title: "View Report" },
+      { action: "dismiss", title: "Dismiss" },
+    ],
   };
 
   event.waitUntil(
@@ -249,19 +253,21 @@ self.addEventListener("notificationclick", (event) => {
   
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
-      // Check if there's already a window open
       for (const client of clients) {
         if (client.url.includes(url) && "focus" in client) {
           return client.focus();
         }
       }
       
-      // Open new window
       if (clients.length === 0) {
         return self.clients.openWindow(url);
       }
     })
   );
+});
+
+self.addEventListener("notificationclose", (event) => {
+  console.log("[ServiceWorker] Notification closed:", event.notification.title);
 });
 
 console.log("[ServiceWorker] CrimeReport service worker loaded");

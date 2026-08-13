@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { rateLimits } from "@/lib/rate-limiter";
+import { sendPasswordResetEmailWorkflow } from "@/lib/email-verification";
 
 /**
  * POST /api/auth/forgot-password
- * Creates a password reset token and returns it (in dev) or sends email (in prod).
+ * Creates a password reset token and sends email via GikpsMail.
  */
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: 3 requests per hour per IP (Audit fix Phase 3 #4)
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    // Rate limit: 3 requests per hour per IP
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
     const rateLimitResult = await rateLimits.passwordReset(ip);
 
     if (!rateLimitResult.allowed) {
@@ -30,9 +31,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find user by email
+    // Find user by email (case-insensitive)
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user) {
@@ -55,38 +56,34 @@ export async function POST(req: NextRequest) {
     // Create new reset token
     await prisma.passwordResetToken.create({
       data: {
-        identifier: email,
+        identifier: email.toLowerCase(),
         token,
         expires,
         userId: user.id,
       },
     });
 
-    // In production, send an email with the reset link.
-    // For development, return the token in the response so it can be used directly.
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const resetLink = `${baseUrl}/reset-password/${token}`;
 
-    console.log(`[ForgotPassword] Reset link for ${email}:`, resetLink);
+    // Send email via GikpsMail (non-blocking — don't fail if email fails)
+    const emailResult = await sendPasswordResetEmailWorkflow(user.id, email.toLowerCase());
+    
+    if (!emailResult.success) {
+      console.error("[ForgotPassword] Email delivery failed:", emailResult.error);
+      // Still return success to prevent email enumeration
+    }
 
-    // TODO (Production): Replace with actual email sending via Resend/SendGrid/Twilio
-    // Example:
-    // import { resend } from "@/lib/resend";
-    // await resend.emails.send({
-    //   from: "CrimeReport <noreply@crimereport.com>",
-    //   to: email,
-    //   subject: "Reset your CrimeReport password",
-    //   html: `<p>Click here to reset your password: <a href="${resetLink}">${resetLink}</a></p><p>This link expires in 1 hour.</p>`,
-    // });
+    // In development, include the reset link for testing
+    const response: Record<string, unknown> = {
+      message: "If an account with that email exists, a reset link has been sent.",
+    };
 
-    return NextResponse.json(
-      {
-        message: "If an account with that email exists, a reset link has been sent.",
-        // DEV ONLY — remove this in production!
-        ...(process.env.NODE_ENV === "development" && { resetLink }),
-      },
-      { status: 200 }
-    );
+    if (process.env.NODE_ENV === "development") {
+      response.resetLink = resetLink;
+    }
+
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("[ForgotPassword] Error:", error);
     return NextResponse.json(

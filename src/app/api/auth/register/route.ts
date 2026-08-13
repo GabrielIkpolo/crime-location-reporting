@@ -79,14 +79,28 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Send verification email (non-blocking — don't fail registration if email fails)
+    const { sendRegistrationVerificationEmail } = await import("@/lib/email-verification");
+    const emailResult = await sendRegistrationVerificationEmail(
+      user.id,
+      user.email!,
+      user.name || "User"
+    );
+
+    if (!emailResult.success) {
+      console.error("[Register] Verification email failed:", emailResult.error);
+      // Don't fail registration — log and continue
+    }
+
     return NextResponse.json(
       {
-        message: "Registration successful. You can now log in.",
+        message: "Registration successful. Please check your email to verify your account.",
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
         },
+        needsVerification: true,
       },
       { status: 201 }
     );

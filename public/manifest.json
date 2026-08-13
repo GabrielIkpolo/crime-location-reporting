@@ -1,21 +1,29 @@
 {
-  "name": "Crime Location Reporting System",
+  "name": "CrimeReport — Community Safety Platform",
   "short_name": "CrimeReport",
+  "description": "Nigeria's community-powered crime reporting and safety map platform. Report incidents, view real-time alerts, and keep your community safe.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "description": "Real-time crime reporting and hotspot visualization system.",
+  "theme_color": "#dc2626",
+  "categories": ["news", "safety", "utilities"],
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }
