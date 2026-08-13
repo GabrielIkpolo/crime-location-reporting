@@ -14,6 +14,11 @@ import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { createGikpsMailTransport } from "./gikpsmail-adapter";
 
+// Check if GikpsMail is configured
+const GIKPSMAIL_API_URL = process.env.GIKPSMAIL_API_URL || "";
+const GIKPSMAIL_API_KEY = process.env.GIKPSMAIL_API_KEY || "";
+const HAS_GIKPSMAIL_CONFIG = GIKPSMAIL_API_URL && GIKPSMAIL_API_KEY;
+
 // Create transporter instance with app-specific settings
 const transporter = createGikpsMailTransport({
   fromName: process.env.EMAIL_FROM_NAME || "CrimeReport System",
@@ -263,6 +268,10 @@ function buildSOSAlertEmail(contactName: string, locationUrl: string): { html: s
  * Send verification email to user.
  */
 async function sendVerificationEmail(email: string, token: string, name: string): Promise<void> {
+  if (!HAS_GIKPSMAIL_CONFIG) {
+    throw new Error("GikpsMail not configured — set GIKPSMAIL_API_URL and GIKPSMAIL_API_KEY in .env");
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   // Use API route for verification (more secure than direct endpoint)
   const verifyUrl = `${baseUrl}/api/auth/verify-email/${token}`;
