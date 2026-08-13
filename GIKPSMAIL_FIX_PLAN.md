@@ -2,6 +2,12 @@
 
 ## Issues Found
 
+### 0. Frontend: Double `response.json()` Call on Register Page ✅ FIXED
+**File**: `src/app/register/page.tsx` line 42 & 45
+**Error**: `TypeError: Response.json: Body has already been consumed`
+**Root Cause**: `response.json()` was called twice — once at line 42, then again inside the `if (response.ok)` block at line 45. HTTP response bodies can only be read once.
+**Fix**: Removed duplicate call; now uses single `data` variable from first read.
+
 ### 1. TypeScript Error in gikpsmail-adapter.ts (BLOCKING BUILD)
 **File**: `src/lib/gikpsmail-adapter.ts` line 163
 **Error**: Type mismatch in `normalizeRecipients()` — the union type for recipients doesn't properly handle arrays of `{address, name?, email?}` objects.

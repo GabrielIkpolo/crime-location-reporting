@@ -42,8 +42,6 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const data = await response.json();
-        
         if (data.needsVerification) {
           toast.success("Account created! Check your email.", {
             description: "We've sent a verification link to " + formData.email + ". Please verify before logging in.",
