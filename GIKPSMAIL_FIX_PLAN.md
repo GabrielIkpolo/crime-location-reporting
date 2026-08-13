@@ -11,8 +11,12 @@
 **Actual service**: `https://gikps-email-service-1.onrender.com` (note: `-1`)
 **Test result**: Service responds HTTP 200 but with empty body — may need API key or different endpoint
 
-### 3. Registration Flow Needs GikpsMail Subscription Notice
-Users should be told to subscribe to gikpsmail service first before registering, since we use a custom HTTP email service (SMTP is blocked on Render).
+### 3. Registration Flow Needs GikpsMail Subscription Notice ✅ DONE
+Users are now shown a prominent amber notice card at the top of the register page explaining:
+- GikpsMail is required for account verification and notifications
+- Link to `https://gikps-email-service-1.onrender.com` to subscribe first
+- Email format must be `you@gikpsmail.com`
+- The email service is internal-only (can only send/receive between registered gikpsmail users)
 
 ### 4. Email Verification & Forgot Password Not Tested
 These flows exist but haven't been tested end-to-end with the actual GikpsMail service.
@@ -29,11 +33,14 @@ These flows exist but haven't been tested end-to-end with the actual GikpsMail s
 - Change GIKPSMAIL_API_URL to use `-1` suffix
 - Add fallback URL handling in adapter code
 
-### Step 3: Add GikpsMail Subscription Notice on Register Page ✅
-- Show prominent banner at top of register page
-- Explain that gikpsmail is required for account verification
-- Link to `https://gikps-email-service-1.onrender.com` to subscribe first
-- Make it visually clear but not blocking
+### Step 3: Add GikpsMail Subscription Notice on Register Page ✅ DONE
+- Added amber info card above the registration form with:
+  - Title: "GikpsMail Required for Registration"
+  - Explanation of internal messaging service
+  - Direct link to subscribe at gikps-email-service-1.onrender.com
+  - Email format hint: `you@gikpsmail.com`
+- Updated email input placeholder from generic to `you@gikpsmail.com`
+- Fully responsive, dark-mode compatible
 
 ### Step 4: Improve Email Adapter Error Handling ✅
 - Add better error messages when GikpsMail service is down

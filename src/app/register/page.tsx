@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { UserPlus, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageTransition } from "@/components/ui/PageTransition";
 
@@ -78,6 +78,35 @@ export default function RegisterPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
+          {/* GikpsMail Subscription Notice */}
+          <div className="mb-6 p-4 rounded-xl border bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/50 shadow-sm">
+            <div className="flex gap-3">
+              <div className="shrink-0 mt-0.5">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  GikpsMail Required for Registration
+                </p>
+                <p className="text-xs leading-relaxed text-amber-700/90 dark:text-amber-400/80">
+                  This platform uses <strong>GikpsMail</strong> — an internal messaging service — for account verification and notifications. 
+                  Please subscribe to the GikpsMail service first before registering.
+                </p>
+                <a
+                  href="https://gikps-email-service-1.onrender.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:underline transition-colors"
+                >
+                  Visit GikpsMail Service → Subscribe Now
+                </a>
+                <p className="text-xs text-amber-600/80 dark:text-amber-500/70">
+                  Your email must be in the format: <code className="px-1.5 py-0.5 rounded bg-amber-100/80 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-mono">you@gikpsmail.com</code>
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="text-center mb-8 space-y-2">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
               <UserPlus className="w-8 h-8" />
@@ -116,7 +145,7 @@ export default function RegisterPage() {
                     <Input 
                       id="email" 
                       type="email" 
-                      placeholder="name@example.com" 
+                      placeholder="you@gikpsmail.com" 
                       className="pl-10" 
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
