@@ -5,7 +5,7 @@
  * This is a nodemailer-compatible transporter that uses HTTP/HTTPS instead of SMTP.
  * 
  * Environment Variables:
- * - GIKPSMAIL_API_URL: URL of your GikpsMail service (e.g., https://gikps-email-service.onrender.com/api)
+ * - GIKPSMAIL_API_URL: URL of your GikpsMail service (e.g., https://gikps-email-service-1.onrender.com)
  * - GIKPSMAIL_API_KEY: Your master API key for authentication
  * - EMAIL_FROM_NAME: Display name for sent emails (default: "CrimeReport System")
  * - EMAIL_FROM_ADDRESS: Default from address (default: "noreply@crimereport.ng")
@@ -40,9 +40,10 @@ interface FromAddress {
 /**
  * Attachment interface matching GikpsMail API expectations
  */
-interface MailAttachment {
+export interface MailAttachment {
   filename: string;
   content: string; // base64 encoded
+  mimeType?: string;
 }
 
 /**
@@ -71,7 +72,8 @@ export interface SendResult {
   messageId: string;
   accepted: string[];
   rejected: string[];
-  response?: unknown;
+  envelope?: { from: string; to: string[] };
+  message?: string;
 }
 
 // ============================================================================
@@ -82,11 +84,14 @@ class GikpsMailTransporter {
   private httpClient: AxiosInstance;
   private fromName: string;
   private fromAddress: string;
+  private timeout: number;
 
-  constructor(config: { apiUrl?: string; apiKey?: string; fromName?: string; fromAddress?: string } = {}) {
+  constructor(config: { apiUrl?: string; apiKey?: string; fromName?: string; fromAddress?: string; timeout?: number } = {}) {
+    const baseUrl = (config.apiUrl || API_URL).replace(/\/+$/, '');
+    
     this.httpClient = axios.create({
-      baseURL: config.apiUrl || API_URL,
-      timeout: 15000, // 15 second timeout for email delivery
+      baseURL: baseUrl,
+      timeout: config.timeout || 30000, // 30 second timeout for email delivery
       headers: {
         "X-API-Key": config.apiKey || API_KEY || "",
       },
@@ -94,6 +99,7 @@ class GikpsMailTransporter {
 
     this.fromName = config.fromName || DEFAULT_FROM_NAME;
     this.fromAddress = config.fromAddress || DEFAULT_FROM_ADDRESS;
+    this.timeout = config.timeout || 30000;
   }
 
   /**
@@ -144,6 +150,15 @@ class GikpsMailTransporter {
   }
 
   /**
+   * Format a single recipient to a string.
+   */
+  private formatRecipient(recipient: Recipient): string {
+    if (!recipient) return '';
+    if (typeof recipient === "string") return recipient.trim();
+    return (recipient.address || recipient.email || "").trim();
+  }
+
+  /**
    * Send an email — nodemailer-compatible sendMail method.
    */
   async sendMail(mailOptions: MailOptions): Promise<SendResult> {
@@ -164,23 +179,23 @@ class GikpsMailTransporter {
       throw new Error("No valid recipient addresses provided");
     }
 
-    // Build payload for GikpsMail HTTP API
+    // Build payload for GikpsMail HTTP API (send-json endpoint)
     const payload: Record<string, unknown> = {
       to: toAddresses[0], // Primary recipient
-      cc: toAddresses.slice(1), // Remaining recipients as CC if multiple
       subject,
-      text,
-      html: html || text,
+      text: text || "",
+      html: html || text || "",
       fromName: fromParsed.name,
       fromEmail: fromParsed.address,
     };
 
-    // Add CC and BCC separately if provided
+    // Add CC if provided
     const ccList = this.normalizeRecipients(mailOptions.cc);
     if (ccList.length > 0) {
       payload.cc = ccList;
     }
 
+    // Add BCC if provided
     const bccList = this.normalizeRecipients(mailOptions.bcc);
     if (bccList.length > 0) {
       payload.bcc = bccList;
@@ -191,27 +206,62 @@ class GikpsMailTransporter {
       payload.attachments = attachments.map((att) => ({
         filename: att.filename || "attachment",
         content: att.content,
+        mimeType: att.mimeType || "application/octet-stream",
       }));
     }
 
     try {
-      const response = await this.httpClient.post("/api/mail/send", payload);
+      const response = await this.httpClient.post("/api/mail/send-json", payload);
+
+      const responseData = response.data as any;
+      
+      // Extract message ID from various possible response formats
+      const messageId = 
+        responseData?.messageId || 
+        responseData?.data?.email?.id || 
+        `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       return {
-        messageId: (response.data as any)?.data?.email?.id || `msg_${Date.now()}`,
+        messageId: messageId,
         accepted: toAddresses,
         rejected: [],
-        response: response.data,
+        envelope: {
+          from: fromParsed.address,
+          to: toAddresses,
+        },
+        message: "Email sent successfully",
       };
     } catch (error) {
+      // Provide detailed error information for debugging
+      let errorMessage = "GikpsMail Transport Error";
+
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        const message = error.response?.data?.error || error.message;
-        console.error(`[GikpsMail] HTTP ${status}: ${message}`);
-        throw new Error(`GikpsMail Transport Error (HTTP ${status}): ${message}`);
+        const serverError = error.response?.data?.error || error.response?.data?.message;
+
+        if (status === 401 || status === 403) {
+          errorMessage += ": Authentication failed. Check your API key.";
+        } else if (status === 404) {
+          errorMessage += `: ${serverError || "Recipient not found"}`;
+        } else if (status && status >= 500) {
+          errorMessage += ": Server error. Please try again later.";
+        } else {
+          errorMessage += `: ${serverError || error.message}`;
+        }
+
+        console.error(`[GikpsMail] HTTP ${status}: ${errorMessage}`);
+      } else {
+        errorMessage += `: ${error instanceof Error ? error.message : "Unknown error"}`;
+        console.error("[GikpsMail] Unexpected error:", error);
       }
-      console.error("[GikpsMail] Unexpected error:", error);
-      throw new Error(`GikpsMail Transport Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+
+      const nodemailerError = new Error(errorMessage);
+      (nodemailerError as any).code = axios.isAxiosError(error) 
+        ? `E${error.response?.status || 'NETWORK'}` 
+        : "ENETWORK";
+      (nodemailerError as any).detail = error instanceof Error ? error.message : String(error);
+
+      throw nodemailerError;
     }
   }
 
@@ -221,10 +271,18 @@ class GikpsMailTransporter {
   async verify(): Promise<boolean> {
     try {
       const response = await this.httpClient.get("/api/auth/verify");
-      return response.status === 200;
-    } catch {
+      return response.status === 200 && response.data?.status === "success";
+    } catch (error) {
+      console.error("[GikpsMail] Transport verification failed:", error instanceof Error ? error.message : String(error));
       return false;
     }
+  }
+
+  /**
+   * Close transporter (no-op for HTTP transport).
+   */
+  close(): Promise<void> {
+    return Promise.resolve();
   }
 }
 
@@ -240,7 +298,7 @@ class GikpsMailTransporter {
  *   await transporter.sendMail({ to, subject, html });
  */
 export function createGikpsMailTransport(
-  config?: { apiUrl?: string; apiKey?: string; fromName?: string; fromAddress?: string }
+  config?: { apiUrl?: string; apiKey?: string; fromName?: string; fromAddress?: string; timeout?: number }
 ): GikpsMailTransporter {
   return new GikpsMailTransporter(config);
 }

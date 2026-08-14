@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { SOSButton } from "@/components/emergency/SOSButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +61,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
+            <SOSButton />
             <Toaster position="top-center" richColors />
           </SessionProvider>
         </ThemeProvider>

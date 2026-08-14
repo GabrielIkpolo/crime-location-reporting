@@ -244,7 +244,7 @@ export default function PublicMapPage() {
           </main>
 
           {/* Sidebar - Compact with tabs */}
-          <aside className="w-full lg:w-96 bg-background border-t lg:border-t-0 lg:border-l overflow-y-auto max-h-[45vh] lg:max-h-none shrink-0">
+          <aside className="w-full lg:w-96 bg-background border-t lg:border-t-0 lg:border-l overflow-y-auto max-h-[45vh] lg:max-h-[calc(100vh-8rem)] shrink-0">
             <div className="p-3 md:p-4 space-y-4">
               {/* Tab Navigation */}
               <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
@@ -280,7 +280,7 @@ export default function PublicMapPage() {
                       No verified reports yet. Check back later!
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-[35vh] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="space-y-2 max-h-[35vh] lg:max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
                       {verifiedReports.map((report) => {
                         const loc = report.location as { type: string; coordinates: [number, number] };
                         return (
@@ -346,7 +346,7 @@ export default function PublicMapPage() {
                       No community warnings at this time.
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-[35vh] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="space-y-2 max-h-[35vh] lg:max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
                       {communityAlerts.map((alert) => {
                         const loc = alert.location as { type: string; coordinates: [number, number] };
                         return (
