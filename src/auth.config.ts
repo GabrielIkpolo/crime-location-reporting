@@ -70,6 +70,19 @@ export const authConfig = {
           return null;
         }
 
+        // Check if email is verified (only for non-Google sign-ins)
+        if (!user.emailVerified) {
+          console.warn(`[Auth] Login attempt: ${user.email} - email not verified`);
+          return { 
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            unverifiedEmail: true,
+          };
+        }
+
         return {
           id: user.id,
           email: user.email,

@@ -16,10 +16,47 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [showVerifyNotice, setShowVerifyNotice] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  const handleResendVerification = async () => {
+    if (!formData.email) {
+      toast.error("Enter your email first", {
+        description: "Please enter the email address you registered with.",
+      });
+      return;
+    }
+
+    setResendingVerification(true);
+    try {
+      const response = await fetch("/api/auth/verify-email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Verification email sent!", {
+          description: "Check your inbox (and spam folder) for the verification link.",
+        });
+      } else {
+        toast.error("Failed to resend", {
+          description: data.error || "Please try again later.",
+        });
+      }
+    } catch (err) {
+      console.error("[Resend Verification] Error:", err);
+      toast.error("Network error", { description: "Could not connect. Please try again." });
+    } finally {
+      setResendingVerification(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     await signIn("google", { callbackUrl: "/" });
@@ -36,7 +73,14 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      if (result?.error) {
+      // Check if user has unverified email (auth.config returns user with flag)
+      const resultAny = result as any;
+      if (resultAny?.user && resultAny.user.unverifiedEmail) {
+        setShowVerifyNotice(true);
+        toast.warning("Email Not Verified", {
+          description: "Please verify your email before logging in. Click 'Resend Verification Email' below.",
+        });
+      } else if (result?.error) {
         toast.error("Login Failed", {
           description: "Invalid email or password. Please try again.",
         });
@@ -157,6 +201,40 @@ export default function LoginPage() {
               </Button>
             </CardFooter>
           </Card>
+          {/* Email Verification Notice */}
+          {showVerifyNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-xl border bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800/50 shadow-sm"
+            >
+              <div className="flex gap-3">
+                <div className="shrink-0 mt-0.5">
+                  <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="space-y-3 flex-1">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                    Email Verification Required
+                  </p>
+                  <p className="text-xs leading-relaxed text-blue-700/90 dark:text-blue-400/80">
+                    Your account needs email verification before you can log in. We&apos;ve sent a verification link to your registered email.
+                  </p>
+                  <Button
+                    onClick={handleResendVerification}
+                    disabled={resendingVerification || !formData.email}
+                    size="sm"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full"
+                  >
+                    {resendingVerification ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : null}
+                    {resendingVerification ? "Sending..." : "Resend Verification Email"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <p className="text-center mt-8 text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-primary hover:underline font-semibold">
