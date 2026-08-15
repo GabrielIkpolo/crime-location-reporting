@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// ============================================================================
+// MIGRATION: middleware.ts → proxy.ts (Next.js 16)
+// The 'middleware' file convention is deprecated. Use 'proxy' instead.
+// See: https://nextjs.org/docs/messages/middleware-to-proxy
+// ============================================================================
+
 // Maximum request body size: 1MB (Audit fix Phase 3 #12)
 const MAX_BODY_SIZE = 1 * 1024 * 1024; // 1 MB
 
