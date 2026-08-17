@@ -4,23 +4,47 @@
  * Sends emails via HTTP to your deployed GikpsMail service on Render.
  * This is a nodemailer-compatible transporter that uses HTTP/HTTPS instead of SMTP.
  * 
+ * For attachments in production: uploads files to Cloudinary first, then sends
+ * the CDN URL reference via GikpsMail API for scalable storage.
+ * 
  * Environment Variables:
- * - GIKPSMAIL_API_URL: URL of your GikpsMail service (e.g., https://gikps-email-service-1.onrender.com)
+ * - GIKPSMAIL_API_URL: URL of your GikpsMail service (e.g., https://gikps-email-service.onrender.com)
  * - GIKPSMAIL_API_KEY: Your master API key for authentication
  * - EMAIL_FROM_NAME: Display name for sent emails (default: "CrimeReport System")
  * - EMAIL_FROM_ADDRESS: Default from address (default: "noreply@crimereport.ng")
+ * - CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET: For production attachments
  */
 
 import axios, { AxiosInstance } from "axios";
+import { v2 as cloudinary } from "cloudinary";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const API_URL = process.env.GIKPSMAIL_API_URL || "http://localhost:3001";
-const API_KEY = process.env.GIKPSMAIL_API_KEY;
+const API_URL = (process.env.GIKPSMAIL_API_URL || "http://localhost:3001").replace(/\/+$/, "");
+const API_KEY = process.env.GIKPSMAIL_API_KEY || "";
 const DEFAULT_FROM_NAME = process.env.EMAIL_FROM_NAME || "CrimeReport System";
 const DEFAULT_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || "noreply@crimereport.ng";
+
+// Cloudinary config (for production attachment uploads)
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
+
+let cloudinaryConfigured = false;
+if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
+  try {
+    cloudinary.config({
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+    });
+    cloudinaryConfigured = true;
+  } catch (err) {
+    console.error("[GikpsMail] Cloudinary configuration failed:", err);
+  }
+}
 
 // Validate required config in production
 if (process.env.NODE_ENV === "production" && !API_KEY) {
@@ -42,7 +66,7 @@ interface FromAddress {
  */
 export interface MailAttachment {
   filename: string;
-  content: string; // base64 encoded
+  content: string | Buffer; // base64 encoded string or raw buffer
   mimeType?: string;
 }
 
@@ -77,6 +101,51 @@ export interface SendResult {
 }
 
 // ============================================================================
+// Cloudinary Upload Helper
+// ============================================================================
+
+/**
+ * Upload a file buffer to Cloudinary and return the CDN URL.
+ * Used for email attachments in production environments.
+ */
+async function uploadToCloudinary(
+  buffer: Buffer,
+  filename: string
+): Promise<{ url: string; publicId: string }> {
+  if (!cloudinaryConfigured) {
+    throw new Error("Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, API_KEY, and API_SECRET.");
+  }
+
+  return new Promise((resolve, reject) => {
+    const ext = filename.split(".").pop()?.toLowerCase() || "bin";
+    const publicId = `crimereport/attachments/${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    cloudinary.uploader.upload_stream(
+      {
+        resource_type: "auto",
+        folder: "crimereport/email_attachments",
+        public_id: publicId,
+        format: ext === "svg" ? undefined : (ext as any),
+        transformation: [
+          // Optimize image uploads
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      },
+      (error, result) => {
+        if (error) return reject(new Error(`Cloudinary upload failed: ${error.message}`));
+        if (!result?.secure_url) return reject(new Error("Cloudinary returned no URL"));
+
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+        });
+      }
+    ).end(buffer);
+  });
+}
+
+// ============================================================================
 // HTTP Transporter Class
 // ============================================================================
 
@@ -87,13 +156,14 @@ class GikpsMailTransporter {
   private timeout: number;
 
   constructor(config: { apiUrl?: string; apiKey?: string; fromName?: string; fromAddress?: string; timeout?: number } = {}) {
-    const baseUrl = (config.apiUrl || API_URL).replace(/\/+$/, '');
+    const baseUrl = (config.apiUrl || API_URL).replace(/\/+$/, "");
     
     this.httpClient = axios.create({
       baseURL: baseUrl,
-      timeout: config.timeout || 30000, // 30 second timeout for email delivery
+      timeout: config.timeout || 60000, // 60 second timeout (Render free tier cold starts)
       headers: {
         "X-API-Key": config.apiKey || API_KEY || "",
+        "Content-Type": "application/json",
       },
     });
 
@@ -150,12 +220,64 @@ class GikpsMailTransporter {
   }
 
   /**
-   * Format a single recipient to a string.
+   * Process attachments: in production, upload to Cloudinary first.
    */
-  private formatRecipient(recipient: Recipient): string {
-    if (!recipient) return '';
-    if (typeof recipient === "string") return recipient.trim();
-    return (recipient.address || recipient.email || "").trim();
+  private async processAttachments(attachments?: MailAttachment[]): Promise<Record<string, unknown>[]> {
+    if (!attachments || attachments.length === 0) return [];
+
+    const processed = await Promise.all(
+      attachments.map(async (att) => {
+        let content: string;
+        let mimeType = att.mimeType || "application/octet-stream";
+
+        // Determine if we should use Cloudinary (production with config)
+        const useCloudinary = cloudinaryConfigured && process.env.NODE_ENV !== "development";
+
+        if (useCloudinary) {
+          // Convert to buffer and upload to Cloudinary
+          let buffer: Buffer;
+          if (typeof att.content === "string") {
+            // Check if it's already base64 or raw text
+            try {
+              buffer = Buffer.from(att.content, "base64");
+            } catch {
+              buffer = Buffer.from(att.content);
+            }
+          } else {
+            buffer = att.content as Buffer;
+          }
+
+          const cloudResult = await uploadToCloudinary(buffer, att.filename || "attachment");
+          
+          // Extract MIME type from URL for Cloudinary uploads
+          if (cloudResult.url.includes("/image/upload/")) mimeType = "image/*";
+          else if (cloudResult.url.includes("/video/upload/")) mimeType = "video/*";
+
+          return {
+            filename: att.filename || "attachment",
+            url: cloudResult.url,
+            mimeType,
+            fromCloudinary: true,
+          };
+        } else {
+          // Development mode: send base64 directly
+          if (typeof att.content === "string") {
+            content = att.content;
+          } else {
+            content = (att.content as Buffer).toString("base64");
+          }
+
+          return {
+            filename: att.filename || "attachment",
+            content,
+            mimeType,
+            fromCloudinary: false,
+          };
+        }
+      })
+    );
+
+    return processed;
   }
 
   /**
@@ -178,6 +300,9 @@ class GikpsMailTransporter {
     if (toAddresses.length === 0) {
       throw new Error("No valid recipient addresses provided");
     }
+
+    // Process attachments (may upload to Cloudinary in production)
+    const processedAttachments = await this.processAttachments(attachments);
 
     // Build payload for GikpsMail HTTP API (send-json endpoint)
     const payload: Record<string, unknown> = {
@@ -202,11 +327,13 @@ class GikpsMailTransporter {
     }
 
     // Add attachments if present
-    if (attachments && attachments.length > 0) {
-      payload.attachments = attachments.map((att) => ({
+    if (processedAttachments.length > 0) {
+      payload.attachments = processedAttachments.map((att) => ({
         filename: att.filename || "attachment",
-        content: att.content,
+        content: att.content || "",
         mimeType: att.mimeType || "application/octet-stream",
+        url: att.url || undefined,
+        fromCloudinary: att.fromCloudinary || false,
       }));
     }
 
@@ -240,19 +367,53 @@ class GikpsMailTransporter {
         const serverError = error.response?.data?.error || error.response?.data?.message;
 
         if (status === 401 || status === 403) {
-          errorMessage += ": Authentication failed. Check your API key.";
+          errorMessage += ": Authentication failed. Check your GIKPSMAIL_API_KEY.";
         } else if (status === 404) {
-          errorMessage += `: ${serverError || "Recipient not found"}`;
+          errorMessage += `: ${serverError || "Recipient not found in GikpsMail system"}`;
         } else if (status && status >= 500) {
           errorMessage += ": Server error. Please try again later.";
+        } else if (status === 429) {
+          errorMessage += ": Rate limit exceeded. Try again later.";
         } else {
           errorMessage += `: ${serverError || error.message}`;
         }
 
         console.error(`[GikpsMail] HTTP ${status}: ${errorMessage}`);
-      } else {
-        errorMessage += `: ${error instanceof Error ? error.message : "Unknown error"}`;
-        console.error("[GikpsMail] Unexpected error:", error);
+      } else if (error instanceof Error) {
+        // Check for Cloudinary errors
+        if (error.message.includes("Cloudinary")) {
+          errorMessage += `: ${error.message}. Emails will still be sent without attachments.`;
+          console.warn("[GikpsMail] Cloudinary error, continuing without attachment:", error.message);
+          
+          // Retry without attachments
+          try {
+            const retryPayload = { ...payload };
+            delete retryPayload.attachments;
+            
+            const response = await this.httpClient.post("/api/mail/send-json", retryPayload);
+            const responseData = response.data as any;
+            const messageId = 
+              responseData?.messageId || 
+              responseData?.data?.email?.id || 
+              `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+            return {
+              messageId: messageId,
+              accepted: toAddresses,
+              rejected: [],
+              envelope: {
+                from: fromParsed.address,
+                to: toAddresses,
+              },
+              message: "Email sent successfully (without attachments due to Cloudinary error)",
+            };
+          } catch (retryError) {
+            console.error("[GikpsMail] Retry without attachments also failed:", retryError);
+          }
+        } else {
+          errorMessage += `: ${error.message}`;
+          console.error("[GikpsMail] Unexpected error:", error);
+        }
       }
 
       const nodemailerError = new Error(errorMessage);

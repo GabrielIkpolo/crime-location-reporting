@@ -19,6 +19,13 @@ const GIKPSMAIL_API_URL = process.env.GIKPSMAIL_API_URL || "";
 const GIKPSMAIL_API_KEY = process.env.GIKPSMAIL_API_KEY || "";
 const HAS_GIKPSMAIL_CONFIG = GIKPSMAIL_API_URL && GIKPSMAIL_API_KEY;
 
+// Log configuration status on module load
+if (HAS_GIKPSMAIL_CONFIG) {
+  console.log(`[EmailVerification] ✅ GikpsMail configured: ${GIKPSMAIL_API_URL}`);
+} else {
+  console.warn("[EmailVerification] ⚠️ GikpsMail NOT configured — emails will fail");
+}
+
 // Create transporter instance with app-specific settings
 const transporter = createGikpsMailTransport({
   fromName: process.env.EMAIL_FROM_NAME || "CrimeReport System",
@@ -278,12 +285,16 @@ async function sendVerificationEmail(email: string, token: string, name: string)
 
   const { html, text } = buildVerificationEmail(name, verifyUrl);
 
+  console.log(`[EmailVerification] Sending to: ${email}, token: ${token.substring(0, 8)}..., URL: ${verifyUrl}`);
+
   await transporter.sendMail({
     to: email,
     subject: "Verify your CrimeReport account",
     html,
     text,
   });
+
+  console.log(`[EmailVerification] ✅ Sent successfully to ${email}`);
 }
 
 /**
@@ -295,12 +306,16 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 
   const { html, text } = buildPasswordResetEmail(resetUrl);
 
+  console.log(`[EmailVerification] Password reset to: ${email}, token: ${token.substring(0, 8)}...`);
+
   await transporter.sendMail({
     to: email,
     subject: "Reset your CrimeReport password",
     html,
     text,
   });
+
+  console.log(`[EmailVerification] ✅ Password reset sent to ${email}`);
 }
 
 /**
@@ -423,13 +438,15 @@ export async function sendRegistrationVerificationEmail(
   name: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[EmailVerification] 📧 Starting registration verification for ${email} (user: ${userId})`);
     const { token } = await createVerificationToken(userId, email);
     await sendVerificationEmail(email, token, name);
     
+    console.log(`[EmailVerification] ✅ Registration verification sent to ${email}`);
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to send verification email";
-    console.error("[EmailVerification] Registration email error:", errorMessage);
+    console.error("[EmailVerification] ❌ Registration email error:", errorMessage);
     // Don't fail registration if email fails — log and continue
     return { success: false, error: errorMessage };
   }
@@ -444,13 +461,15 @@ export async function resendVerificationEmail(
   name: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[EmailVerification] 📧 Resending verification for ${email} (user: ${userId})`);
     const { token } = await createVerificationToken(userId, email);
     await sendVerificationEmail(email, token, name);
     
+    console.log(`[EmailVerification] ✅ Verification resend sent to ${email}`);
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to resend verification email";
-    console.error("[EmailVerification] Resend email error:", errorMessage);
+    console.error("[EmailVerification] ❌ Resend email error:", errorMessage);
     return { success: false, error: errorMessage };
   }
 }
@@ -463,6 +482,7 @@ export async function sendPasswordResetEmailWorkflow(
   email: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[EmailVerification] 📧 Starting password reset for ${email} (user: ${userId})`);
     const token = generateToken();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
@@ -477,10 +497,11 @@ export async function sendPasswordResetEmailWorkflow(
 
     await sendPasswordResetEmail(email, token);
 
+    console.log(`[EmailVerification] ✅ Password reset sent to ${email}`);
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
-    console.error("[EmailVerification] Reset email error:", errorMessage);
+    console.error("[EmailVerification] ❌ Reset email error:", errorMessage);
     // Don't fail the forgot-password flow if email fails — token is still created
     return { success: false, error: errorMessage };
   }
