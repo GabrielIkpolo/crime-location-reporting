@@ -10,6 +10,17 @@ import type { NextRequest } from "next/server";
 // Maximum request body size: 1MB (Audit fix Phase 3 #12)
 const MAX_BODY_SIZE = 1 * 1024 * 1024; // 1 MB
 
+// ============================================================================
+// CORS for Flutter app integration — migrated from middleware.ts
+// The original middleware.ts handled CORS headers for the Flutter mobile app.
+// This is now merged into proxy.ts to avoid Next.js 16's "both detected" error.
+// See: https://nextjs.org/docs/messages/middleware-to-proxy
+// ============================================================================
+const FLUTTER_ALLOWED_ORIGINS = [
+  'http://localhost:3000',   // Next.js dev server
+  'http://127.0.0.1:3000',
+];
+
 // Security headers middleware — runs on every request BEFORE auth check
 function securityHeaders(request: NextRequest): NextResponse {
   const response = NextResponse.next();
@@ -76,6 +87,37 @@ function securityHeaders(request: NextRequest): NextResponse {
   return response;
 }
 
+// CORS headers for Flutter app — only on API routes
+function corsHeaders(request: NextRequest, response: NextResponse): void {
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
+  if (!isApiRoute) return;
+
+  const origin = request.headers.get('origin');
+  
+  // Check if the origin matches allowed patterns (including localhost with any port for Flutter hot reload)
+  let isAllowed = FLUTTER_ALLOWED_ORIGINS.some(pattern => {
+    if (pattern.includes('*')) {
+      const basePattern = pattern.replace('*', '');
+      return origin?.startsWith(basePattern) ?? false;
+    }
+    return origin === pattern;
+  });
+
+  // Also allow any localhost:* for Flutter hot reload
+  if (!isAllowed && origin?.match(/^http:\/\/localhost:\d+$/)) {
+    isAllowed = true;
+  }
+
+  if (origin && isAllowed) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+  }
+
+  // Always set these headers for preflight and actual requests on API routes
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.headers.set('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+}
+
 // Body size enforcement middleware
 function enforceBodySize(request: NextRequest): NextResponse | null {
   const contentLength = request.headers.get("content-length");
@@ -96,6 +138,21 @@ function enforceBodySize(request: NextRequest): NextResponse | null {
 }
 
 export default function middleware(req: NextRequest) {
+  // Handle CORS preflight requests for Flutter app (migrated from middleware.ts)
+  if (req.method === 'OPTIONS' && req.nextUrl.pathname.startsWith('/api/')) {
+    const response = new NextResponse(null, { status: 204 });
+    const origin = req.headers.get('origin');
+    
+    // Allow any localhost:* for Flutter hot reload
+    if (origin?.match(/^http:\/\/localhost:\d+$/)) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+    }
+    
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return response;
+  }
+
   const isAdminRoute = req.nextUrl.pathname.startsWith("/admin");
 
   // Enforce body size limit on all requests (Audit fix Phase 3 #12)
@@ -106,6 +163,9 @@ export default function middleware(req: NextRequest) {
 
   // Apply security headers to ALL responses
   let response = securityHeaders(req);
+
+  // Apply CORS headers for Flutter app (API routes only)
+  corsHeaders(req, response);
 
   // Admin route protection — check for session cookie presence
   // This is a lightweight check that doesn't require NextAuth in edge runtime.

@@ -49,6 +49,10 @@ model User {
   notificationPreferences    NotificationPreference[]
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens   EmailVerificationToken[]
+  // Flutter Mobile App relations
+  sosAlerts                  SosAlert[]
+  sosAlertsAssigned          SosAlert[]       @relation("SOSResponder")
+  createdBroadcastAlerts     BroadcastAlert[]
   createdAt                  DateTime   @default(now())
   updatedAt                  DateTime   @updatedAt
 }
@@ -195,3 +199,71 @@ model NotificationPreference {
 
   @@unique([userId])
 }
+
+// ============================================
+// Flutter Mobile App — New Models (Non-Breaking)
+// ============================================
+
+enum SosAlertStatus {
+  TRIGGERED
+  ACKNOWLEDGED
+  EN_ROUTE
+  ON_SCENE
+  RESOLVED
+  CANCELLED
+}
+
+model SosAlert {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  sosAlertId      String          @unique // e.g., "SOS-2024-001"
+  reporter        User            @relation(fields: [reporterId], references: [id])
+  reporterId      String          @db.ObjectId
+
+  status          SosAlertStatus  @default(TRIGGERED)
+
+  // Reporter's location when SOS was triggered
+  location        Json            // GeoJSON Point { type: "Point", coordinates: [lng, lat] }
+  address         String?
+
+  // Responder assignment
+  assignedTo      User?           @relation("SOSResponder", fields: [assignedResponderId], references: [id])
+  assignedResponderId String?     @db.ObjectId
+
+  // Timeline tracking
+  triggeredAt     DateTime        @default(now())
+  acknowledgedAt  DateTime?
+  enRouteAt       DateTime?
+  onSceneAt       DateTime?
+  resolvedAt      DateTime?
+  cancelledAt     DateTime?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+}
+
+enum BroadcastPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model BroadcastAlert {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  message         String
+  targetAudience  String          @default("all") // "all", "region", "verified_users"
+  regionFilter    Json?           // GeoJSON polygon or radius { type: "Point", coordinates: [lng, lat], radiusKm: Number }
+  priority        BroadcastPriority @default(MEDIUM)
+  isActive        Boolean         @default(true)
+  sentAt          DateTime?
+  deliveredCount  Int             @default(0)
+  createdBy       User            @relation(fields: [createdById], references: [id])
+  createdById     String          @db.ObjectId
+
+  createdAt       DateTime        @default(now())
+}
+
