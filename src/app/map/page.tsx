@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/ui/PageTransition";
-import { Loader2, TrendingUp, ShieldCheck, AlertTriangle, Users, MapPin, ZoomIn, ZoomOut, LocateFixed, Filter, Eye, EyeOff } from "lucide-react";
+import { Loader2, TrendingUp, ShieldCheck, AlertTriangle, Users, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ZoomIn, ZoomOut, LocateFixed, Filter, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Report, CommunityAlert } from "@/types";
@@ -30,6 +30,8 @@ export default function PublicMapPage() {
   const [activeTab, setActiveTab] = useState<CardType>("verified");
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showCrowdAlerts, setShowCrowdAlerts] = useState(true);
+  const [verifiedPage, setVerifiedPage] = useState(1);
+  const verifiedItemsPerPage = 5;
 
   useEffect(() => {
     let mounted = true;
@@ -280,8 +282,12 @@ export default function PublicMapPage() {
                       No verified reports yet. Check back later!
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-[35vh] lg:max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                      {verifiedReports.map((report) => {
+                    <div className="space-y-2">
+                      {/* Paginated list */}
+                      {verifiedReports.slice(
+                        (verifiedPage - 1) * verifiedItemsPerPage,
+                        verifiedPage * verifiedItemsPerPage
+                      ).map((report) => {
                         const loc = report.location as { type: string; coordinates: [number, number] };
                         return (
                           <Card 
@@ -329,6 +335,58 @@ export default function PublicMapPage() {
                           </Card>
                         );
                       })}
+
+                      {/* Pagination Controls */}
+                      {verifiedReports.length > verifiedItemsPerPage && (
+                        <div className="flex items-center justify-between pt-2 mt-2 border-t">
+                          <span className="text-[10px] text-muted-foreground">
+                            Showing {(verifiedPage - 1) * verifiedItemsPerPage + 1}–
+                            {Math.min(verifiedPage * verifiedItemsPerPage, verifiedReports.length)} of{" "}
+                            {verifiedReports.length}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7" 
+                              onClick={() => setVerifiedPage(1)}
+                              disabled={verifiedPage === 1}
+                            >
+                              <ChevronsLeft className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7" 
+                              onClick={() => setVerifiedPage(p => Math.max(1, p - 1))}
+                              disabled={verifiedPage === 1}
+                            >
+                              <ChevronLeft className="w-3 h-3" />
+                            </Button>
+                            <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded min-w-[60px] text-center">
+                              {verifiedPage} / {Math.ceil(verifiedReports.length / verifiedItemsPerPage)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7" 
+                              onClick={() => setVerifiedPage(p => p + 1)}
+                              disabled={verifiedPage >= Math.ceil(verifiedReports.length / verifiedItemsPerPage)}
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7" 
+                              onClick={() => setVerifiedPage(Math.ceil(verifiedReports.length / verifiedItemsPerPage))}
+                              disabled={verifiedPage >= Math.ceil(verifiedReports.length / verifiedItemsPerPage)}
+                            >
+                              <ChevronsRight className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
