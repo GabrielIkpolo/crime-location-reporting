@@ -33,7 +33,10 @@ export function NotificationBell() {
     try {
       const response = await fetch("/api/notifications");
       if (response.ok) {
-        const data: NotificationItem[] = await response.json();
+        const raw: unknown = await response.json();
+        const data: NotificationItem[] = Array.isArray(raw)
+          ? raw.filter((item): item is NotificationItem => typeof item === "object" && item !== null && "id" in item && "title" in item && "message" in item && "type" in item && "isRead" in item && "createdAt" in item)
+          : [];
         setNotifications(data.slice(0, 5)); // Show last 5
         setUnreadCount(data.filter((n) => !n.isRead).length);
       }

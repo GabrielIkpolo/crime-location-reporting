@@ -16,10 +16,24 @@ const MAX_BODY_SIZE = 1 * 1024 * 1024; // 1 MB
 // This is now merged into proxy.ts to avoid Next.js 16's "both detected" error.
 // See: https://nextjs.org/docs/messages/middleware-to-proxy
 // ============================================================================
-const FLUTTER_ALLOWED_ORIGINS = [
-  'http://localhost:3000',   // Next.js dev server
+// Allowed origins for Flutter mobile app CORS.
+// - localhost:* covers Flutter web dev server on Chrome (via regex below)
+// - 127.0.0.1:* is required because Flutter web dev server uses 127.0.0.1, not localhost
+// - FLUTTER_WEB_ORIGINS env var: comma-separated list of production Flutter web origins
+const DEFAULT_FLUTTER_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:43233',
 ];
+
+// Parse additional origins from environment variable (comma-separated)
+const FLUTTER_WEB_ORIGINS_ENV = process.env.FLUTTER_WEB_ORIGINS || '';
+const ENV_FLUTTER_ORIGINS = FLUTTER_WEB_ORIGINS_ENV
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const FLUTTER_ALLOWED_ORIGINS = [...DEFAULT_FLUTTER_ALLOWED_ORIGINS, ...ENV_FLUTTER_ORIGINS];
 
 // Security headers middleware — runs on every request BEFORE auth check
 function securityHeaders(request: NextRequest): NextResponse {
@@ -103,8 +117,8 @@ function corsHeaders(request: NextRequest, response: NextResponse): void {
     return origin === pattern;
   });
 
-  // Also allow any localhost:* for Flutter hot reload
-  if (!isAllowed && origin?.match(/^http:\/\/localhost:\d+$/)) {
+  // Also allow any localhost:* or 127.0.0.1:* for Flutter hot reload (covers Chrome dev server)
+  if (!isAllowed && origin?.match(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/)) {
     isAllowed = true;
   }
 
@@ -143,8 +157,8 @@ export default function middleware(req: NextRequest) {
     const response = new NextResponse(null, { status: 204 });
     const origin = req.headers.get('origin');
     
-    // Allow any localhost:* for Flutter hot reload
-    if (origin?.match(/^http:\/\/localhost:\d+$/)) {
+    // Allow any localhost:* or 127.0.0.1:* for Flutter hot reload
+    if (origin?.match(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/)) {
       response.headers.set('Access-Control-Allow-Origin', origin);
     }
     

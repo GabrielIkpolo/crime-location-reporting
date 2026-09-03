@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth-helper";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -19,13 +19,14 @@ const deleteAccountSchema = z.object({
 /**
  * DELETE /api/user/account
  * Permanently deletes the authenticated user's account and all associated data.
+ * Supports both cookie-based (browser) and Bearer token (Flutter) auth.
  * Rate-limited to prevent accidental mass deletions.
  */
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
   let userId: string | undefined;
 
   try {
-    const session = await auth();
+    const session = await getAuthSession(req);
     userId = session?.user?.id;
 
     if (!userId) {
@@ -66,6 +67,14 @@ export async function DELETE(req: Request) {
     }
 
     const body = await req.json();
+
+    // Verify password for accounts without passwords (e.g., Google OAuth users)
+    if (!user.password) {
+      return NextResponse.json(
+        { error: "Accounts created via OAuth cannot be deleted from the mobile app. Please use the web portal." },
+        { status: 403 }
+      );
+    }
 
     // Validate inputs with Zod
     const validationResult = deleteAccountSchema.safeParse(body);

@@ -70,6 +70,20 @@ export const authConfig = {
           return null;
         }
 
+        // Check if user is banned
+        if (user.isBanned) {
+          console.warn(`[Auth] Login attempt by banned user: ${user.email}`);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            isBanned: true,
+            banReason: user.banReason || 'Your account has been suspended.',
+          };
+        }
+
         // Check if email is verified (only for non-Google sign-ins)
         if (!user.emailVerified) {
           console.warn(`[Auth] Login attempt: ${user.email} - email not verified`);

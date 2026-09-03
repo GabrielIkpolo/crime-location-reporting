@@ -33,28 +33,31 @@ enum NotificationType {
 }
 
 model User {
-  id            String     @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          UserRole   @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  reports                  Report[]
-  adminLogs                AdminLog[]
-  notifications            Notification[]
-  sosEmergencyContacts     SosEmergencyContact[]
-  notificationPreferences    NotificationPreference[]
-  passwordResetTokens        PasswordResetToken[]
-  emailVerificationTokens   EmailVerificationToken[]
+  id                      String                   @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String?
+  email                   String?                  @unique
+  emailVerified           DateTime?
+  image                   String?
+  password                String?
+  role                    UserRole                 @default(USER)
+  isBanned                Boolean                  @default(false)
+  banReason               String?
+  bannedAt                DateTime?
+  accounts                Account[]
+  sessions                Session[]
+  reports                 Report[]
+  adminLogs               AdminLog[]
+  notifications           Notification[]
+  sosEmergencyContacts    SosEmergencyContact[]
+  notificationPreferences NotificationPreference[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   // Flutter Mobile App relations
-  sosAlerts                  SosAlert[]
-  sosAlertsAssigned          SosAlert[]       @relation("SOSResponder")
-  createdBroadcastAlerts     BroadcastAlert[]
-  createdAt                  DateTime   @default(now())
-  updatedAt                  DateTime   @updatedAt
+  sosAlerts               SosAlert[]
+  sosAlertsAssigned       SosAlert[]               @relation("SOSResponder")
+  createdBroadcastAlerts  BroadcastAlert[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 }
 
 model Account {
@@ -133,6 +136,12 @@ model Report {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
+  // Flutter Mobile App — optional JSON fields for rich report data
+  witnesses           Json? @default("[]") // Array of { name, phone, statement }
+  suspectInfo         Json? @default("{}") // Object with description, vehicleInfo, numberOfSuspects
+  verificationHistory Json? @default("[]") // Array of { action, performedBy, timestamp, notes }
+  evidence            Json? @default("[]") // Array of { type: photo|video|audio, url, uploadedAt }
+
   @@index([status, createdAt])
   @@index([reporterId])
   @@index([riskLevel])
@@ -159,15 +168,15 @@ model SystemSetting {
 }
 
 model Notification {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String           @db.ObjectId
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  message     String
-  type        NotificationType
-  isRead      Boolean          @default(false)
-  metadata    Json?            // Additional data (e.g., reportId, location)
-  createdAt   DateTime         @default(now())
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String           @db.ObjectId
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  metadata  Json? // Additional data (e.g., reportId, location)
+  createdAt DateTime         @default(now())
 
   @@index([userId, isRead])
 }
@@ -184,18 +193,18 @@ model SosEmergencyContact {
 }
 
 model NotificationPreference {
-  id            String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String           @db.ObjectId
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hotspotAlerts Boolean          @default(true)
-  statusChanges Boolean          @default(true)
-  communityWarnings Boolean        @default(true)
-  sosResponses  Boolean          @default(true)
-  emailEnabled  Boolean          @default(false)
-  pushEnabled   Boolean          @default(true)
-  radiusKm      Float            @default(5)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotspotAlerts     Boolean  @default(true)
+  statusChanges     Boolean  @default(true)
+  communityWarnings Boolean  @default(true)
+  sosResponses      Boolean  @default(true)
+  emailEnabled      Boolean  @default(false)
+  pushEnabled       Boolean  @default(true)
+  radiusKm          Float    @default(5)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([userId])
 }
@@ -214,31 +223,31 @@ enum SosAlertStatus {
 }
 
 model SosAlert {
-  id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  sosAlertId      String          @unique // e.g., "SOS-2024-001"
-  reporter        User            @relation(fields: [reporterId], references: [id])
-  reporterId      String          @db.ObjectId
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  sosAlertId String @unique // e.g., "SOS-2024-001"
+  reporter   User   @relation(fields: [reporterId], references: [id])
+  reporterId String @db.ObjectId
 
-  status          SosAlertStatus  @default(TRIGGERED)
+  status SosAlertStatus @default(TRIGGERED)
 
   // Reporter's location when SOS was triggered
-  location        Json            // GeoJSON Point { type: "Point", coordinates: [lng, lat] }
-  address         String?
+  location Json // GeoJSON Point { type: "Point", coordinates: [lng, lat] }
+  address  String?
 
   // Responder assignment
-  assignedTo      User?           @relation("SOSResponder", fields: [assignedResponderId], references: [id])
-  assignedResponderId String?     @db.ObjectId
+  assignedTo          User?   @relation("SOSResponder", fields: [assignedResponderId], references: [id])
+  assignedResponderId String? @db.ObjectId
 
   // Timeline tracking
-  triggeredAt     DateTime        @default(now())
-  acknowledgedAt  DateTime?
-  enRouteAt       DateTime?
-  onSceneAt       DateTime?
-  resolvedAt      DateTime?
-  cancelledAt     DateTime?
+  triggeredAt    DateTime  @default(now())
+  acknowledgedAt DateTime?
+  enRouteAt      DateTime?
+  onSceneAt      DateTime?
+  resolvedAt     DateTime?
+  cancelledAt    DateTime?
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([reporterId])
@@ -252,18 +261,17 @@ enum BroadcastPriority {
 }
 
 model BroadcastAlert {
-  id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  title           String
-  message         String
-  targetAudience  String          @default("all") // "all", "region", "verified_users"
-  regionFilter    Json?           // GeoJSON polygon or radius { type: "Point", coordinates: [lng, lat], radiusKm: Number }
-  priority        BroadcastPriority @default(MEDIUM)
-  isActive        Boolean         @default(true)
-  sentAt          DateTime?
-  deliveredCount  Int             @default(0)
-  createdBy       User            @relation(fields: [createdById], references: [id])
-  createdById     String          @db.ObjectId
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  message        String
+  targetAudience String            @default("all") // "all", "region", "verified_users"
+  regionFilter   Json? // GeoJSON polygon or radius { type: "Point", coordinates: [lng, lat], radiusKm: Number }
+  priority       BroadcastPriority @default(MEDIUM)
+  isActive       Boolean           @default(true)
+  sentAt         DateTime?
+  deliveredCount Int               @default(0)
+  createdBy      User              @relation(fields: [createdById], references: [id])
+  createdById    String            @db.ObjectId
 
-  createdAt       DateTime        @default(now())
+  createdAt DateTime @default(now())
 }
-

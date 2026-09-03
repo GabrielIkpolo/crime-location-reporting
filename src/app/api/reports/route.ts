@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAuthSession } from "@/lib/auth-helper";
 import prisma from "@/lib/prisma";
 import { reportSchema } from "@/lib/validations";
 import { rateLimits } from "@/lib/rate-limiter";
@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many reports. Please try again in an hour." }, { status: 429 });
     }
 
-    const session = await auth();
+    // Support both cookie-based (browser) and Bearer token (Flutter) auth
+    const session = await getAuthSession(req);
     const body = await req.json();
 
     // 2. Validation

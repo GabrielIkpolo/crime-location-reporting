@@ -1,25 +1,17 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthSession } from "@/lib/auth-helper";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+/**
+ * PATCH /api/notifications/[id] — Mark notification as read (browser clients)
+ */
+async function markAsRead(request: Request | NextRequest, userId: string, notificationId: string): Promise<NextResponse> {
   try {
-    const session = await auth();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const notificationId = (await params).id;
-
     // Verify the notification belongs to the user
     const notification = await prisma.notification.findFirst({
       where: {
         id: notificationId,
-        userId: session.user.id,
+        userId: userId,
       },
     });
 
@@ -45,12 +37,37 @@ export async function PATCH(
   }
 }
 
+export async function PATCH(request: Request | NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getAuthSession(request as NextRequest);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const notificationId = (await params).id;
+  return markAsRead(request, session.user.id, notificationId);
+}
+
+/**
+ * PUT /api/notifications/[id] — Mark notification as read (Flutter clients)
+ */
+export async function PUT(request: Request | NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getAuthSession(request as NextRequest);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const notificationId = (await params).id;
+  return markAsRead(request, session.user.id, notificationId);
+}
+
 export async function DELETE(
-  _request: Request,
+  _request: Request | NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
-    const session = await auth();
+    const session = await getAuthSession(_request as NextRequest);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

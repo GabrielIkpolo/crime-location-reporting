@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth-helper";
 import prisma from "@/lib/prisma";
 
-// GET — Fetch notification preferences for the current user
-export async function GET(): Promise<NextResponse> {
+/**
+ * GET /api/notifications/preferences
+ * Fetch notification preferences for the current user.
+ * Supports both cookie-based (browser) and Bearer token (Flutter) auth.
+ */
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(req);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,10 +45,14 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-// PUT — Update notification preferences for the current user
-export async function PUT(request: Request): Promise<NextResponse> {
+/**
+ * PUT /api/notifications/preferences
+ * Update notification preferences for the current user.
+ * Supports both cookie-based (browser) and Bearer token (Flutter) auth.
+ */
+export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(request);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
