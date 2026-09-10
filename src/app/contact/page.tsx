@@ -47,7 +47,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Email Us</h3>
-                <p className="text-muted-foreground">support@crimereport.gov</p>
+                <p className="text-muted-foreground">support_crimereport@gikpsmail.com</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -56,7 +56,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Call Us</h3>
-                <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                <p className="text-muted-foreground">+(234) 80 0000 0000</p>
               </div>
             </div>
             <div className="flex items-start gap-4">

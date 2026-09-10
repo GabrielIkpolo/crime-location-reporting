@@ -18,7 +18,7 @@ export default function TermsPage() {
             <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive-foreground font-medium">
               IMPORTANT: This application is a community-driven tool. It is NOT a replacement for 
               emergency services. In case of an active crime or emergency, please contact your 
-              local police or emergency services (e.g., 911, 112) immediately.
+              local police or emergency services (e.g., 911, 112, 199) immediately.
             </div>
             <p>
               We do not guarantee the accuracy, completeness, or timeliness of the reports provided 

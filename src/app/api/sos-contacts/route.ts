@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthSession } from "@/lib/auth-helper";
 
 // GET — Fetch all SOS contacts for the current user
-export async function GET(): Promise<NextResponse> {
+// Supports both cookie-based (browser) and Bearer token (Flutter) auth.
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(req);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,9 +28,10 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // POST — Create a new SOS contact
-export async function POST(request: Request): Promise<NextResponse> {
+// Supports both cookie-based (browser) and Bearer token (Flutter) auth.
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(request);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getAuthSession } from "@/lib/auth-helper";
 import { updateReportSchema } from "@/lib/validations-admin";
 
+/**
+ * GET /api/reports/[id]
+ * Access rules (non-breaking — admin behavior unchanged):
+ * - Admin: can view any report.
+ * - Report owner: can view their own reports (any status) — used by the Flutter app's
+ *   "My Reports" detail/timeline screens.
+ * - Everyone else (incl. anonymous): only VERIFIED / CROWD_REPORTED reports are visible,
+ *   matching what GET /api/reports already exposes publicly on the map.
+ */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
+  const session = await getAuthSession(req);
 
   try {
     const { id } = await params;
@@ -18,6 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
 
+    const isAdmin = session?.user?.role === "ADMIN";
+    const isOwner = !!session?.user?.id && report.reporterId === session.user.id;
+    const isPubliclyVisible = report.status === "VERIFIED" || report.status === "CROWD_REPORTED";
+
+    if (!isAdmin && !isOwner && !isPubliclyVisible) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     return NextResponse.json(report);
   } catch (err: unknown) {
     console.error("[GET Report] Unexpected error:", err);
@@ -26,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
+  const session = await getAuthSession(req);
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

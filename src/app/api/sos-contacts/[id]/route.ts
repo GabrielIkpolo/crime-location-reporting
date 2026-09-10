@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthSession } from "@/lib/auth-helper";
 
 // PATCH — Update an SOS contact
+// Supports both cookie-based (browser) and Bearer token (Flutter) auth.
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(request);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -93,13 +94,22 @@ export async function PATCH(
   }
 }
 
+// PUT — alias for PATCH (backward compatibility with mobile clients)
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  return PATCH(request, context);
+}
+
 // DELETE — Remove an SOS contact
+// Supports both cookie-based (browser) and Bearer token (Flutter) auth.
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const session = await auth();
+    const session = await getAuthSession(request);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

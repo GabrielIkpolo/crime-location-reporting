@@ -9,6 +9,8 @@ import type { NextRequest } from "next/server";
 
 // Maximum request body size: 1MB (Audit fix Phase 3 #12)
 const MAX_BODY_SIZE = 1 * 1024 * 1024; // 1 MB
+// Media uploads (Flutter evidence photos/videos) are allowed up to 25MB — /api/uploads only.
+const MAX_UPLOAD_BODY_SIZE = 25 * 1024 * 1024; // 25 MB
 
 // ============================================================================
 // CORS for Flutter app integration — migrated from middleware.ts
@@ -138,11 +140,14 @@ function enforceBodySize(request: NextRequest): NextResponse | null {
   
   if (contentLength) {
     const bodySize = parseInt(contentLength, 10);
-    
+    // Media upload route allows larger bodies (videos); everything else stays at 1MB.
+    const isUploadRoute = request.nextUrl.pathname.startsWith('/api/uploads');
+    const limit = isUploadRoute ? MAX_UPLOAD_BODY_SIZE : MAX_BODY_SIZE;
+
     // Only check POST/PUT/PATCH requests with a body
-    if (["POST", "PUT", "PATCH"].includes(request.method) && bodySize > MAX_BODY_SIZE) {
+    if (["POST", "PUT", "PATCH"].includes(request.method) && bodySize > limit) {
       return NextResponse.json(
-        { error: `Request body too large. Maximum size is 1MB.` },
+        { error: `Request body too large. Maximum size is ${Math.round(limit / (1024 * 1024))}MB.` },
         { status: 413 }
       );
     }

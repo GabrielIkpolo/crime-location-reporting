@@ -62,20 +62,41 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [refreshing, setRefreshing] = useState(false);
 
+  // const fetchNotifications = useCallback(async () => {
+  //   try {
+  //     const response = await fetch("/api/notifications");
+  //     if (response.ok) {
+  //       const data: NotificationItem[] = await response.json();
+  //       setNotifications(data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch notifications:", error);
+  //   } finally {
+  //     setLoading(false);
+  //     setRefreshing(false);
+  //   }
+  // }, []);
+
   const fetchNotifications = useCallback(async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      if (response.ok) {
-        const data: NotificationItem[] = await response.json();
-        setNotifications(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  try {
+    const response = await fetch("/api/notifications");
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Handle different response formats
+      const notificationsArray = Array.isArray(data) ? data : data.notifications || [];
+      
+      setNotifications(notificationsArray);
     }
-  }, []);
+  } catch (error) {
+    console.error("Failed to fetch notifications:", error);
+    setNotifications([]); // Ensure it's always an array
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
+
 
   useEffect(() => {
     fetchNotifications();

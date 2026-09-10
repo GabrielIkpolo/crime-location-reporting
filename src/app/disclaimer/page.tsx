@@ -27,7 +27,7 @@ export default function DisclaimerPage() {
               <p className="text-sm leading-relaxed">
                 <strong>Crime Location Reporting System is NOT an emergency response tool.</strong><br />
                 If you are in immediate danger, witnessing a crime in progress, or require urgent medical assistance,
-                do NOT use this app. Please contact your local emergency services (e.g., 911, 112, 999) immediately.
+                do NOT use this app. Please contact your local emergency services (e.g., 911, 112, 999, 199) immediately.
               </p>
             </CardContent>
           </Card>
