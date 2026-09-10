@@ -58,3 +58,7 @@ handover-note.md
 NEW_FEATURES_SUMMARY.md
 AUDIT_FIXES_TODO.md
 AUDIT_REPORT.md
+FLUTTER_INTEGRATION_TODO.md
+test-email.mjs
+test-geo-utils.mjs
+test-server.sh
