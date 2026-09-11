@@ -134,10 +134,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(userId)) {
-      return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 });
+    // Validate MongoDB ObjectId format (24 hex characters)
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+    if (!objectIdRegex.test(userId)) {
+      return NextResponse.json({ error: "Invalid user ID format. Must be a valid MongoDB ObjectId." }, { status: 400 });
     }
 
     // Check if it's the admin themselves

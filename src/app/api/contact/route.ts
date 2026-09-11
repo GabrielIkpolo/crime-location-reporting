@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { rateLimits } from "@/lib/rate-limiter";
 
+/**
+ * Escape HTML special characters to prevent template injection and rendering issues.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support_crimereport@gikpsmail.com";
 
 /**
@@ -87,10 +99,15 @@ export async function POST(req: NextRequest) {
     try {
       const { createGikpsMailTransport } = await import("@/lib/gikpsmail-adapter");
       
-      const transporter = createGikpsMailTransport({
-        fromName: sanitizedName,
-        fromAddress: sanitizedEmail,
-      });
+      // Use default transporter (system from address) — custom from addresses cause blank fields in GikpsMail web UI
+      const transporter = createGikpsMailTransport();
+
+      // Escape all user-generated content to prevent HTML injection and rendering issues
+      const escapedName = escapeHtml(sanitizedName);
+      const escapedEmail = escapeHtml(sanitizedEmail);
+      const escapedSubject = escapeHtml(sanitizedSubject);
+      const escapedMessage = escapeHtml(sanitizedMessage);
+      const escapedIp = escapeHtml(ip);
 
       const html = `
         <!DOCTYPE html>
@@ -114,18 +131,18 @@ export async function POST(req: NextRequest) {
                     <td style="padding: 30px;">
                       <div style="margin-bottom: 20px;">
                         <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;"><strong>From:</strong></p>
-                        <p style="margin: 0 0 16px; font-size: 15px;">${sanitizedName} &lt;${sanitizedEmail}&gt;</p>
+                        <p style="margin: 0 0 16px; font-size: 15px;">${escapedName} &lt;${escapedEmail}&gt;</p>
                         
                         <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;"><strong>Subject:</strong></p>
-                        <p style="margin: 0 0 20px; font-size: 15px;">${sanitizedSubject}</p>
+                        <p style="margin: 0 0 20px; font-size: 15px;">${escapedSubject}</p>
                         
                         <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
                           <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;"><strong>Message:</strong></p>
-                          <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${sanitizedMessage}</p>
+                          <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${escapedMessage}</p>
                         </div>
                         
                         <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                          Received on ${new Date().toLocaleString()} from IP: ${ip}
+                          Received on ${new Date().toLocaleString()} from IP: ${escapedIp}
                         </p>
                       </div>
                     </td>
@@ -147,7 +164,7 @@ export async function POST(req: NextRequest) {
 
       await transporter.sendMail({
         to: SUPPORT_EMAIL,
-        subject: `[CrimeReport Contact] ${sanitizedSubject}`,
+        subject: `[CrimeReport Contact] From: ${escapedName} (${escapedEmail}) - ${escapedSubject}`,
         html,
         text: `New contact message from ${sanitizedName} (${sanitizedEmail})\n\nSubject: ${sanitizedSubject}\n\nMessage:\n${sanitizedMessage}\n\nReceived on ${new Date().toLocaleString()}`,
       });

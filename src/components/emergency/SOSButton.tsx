@@ -116,12 +116,11 @@ export function SOSButton() {
       return;
     }
 
-    let alertSent = false;
     let emailSuccessCount = 0;
     const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0];
 
     // ========================================================================
-    // ORDERED FALLBACK CHAIN: Email → WhatsApp → SMS
+    // PARALLEL ALERT CHAIN: Email + WhatsApp + SMS all fire simultaneously
     // ========================================================================
 
     // STEP 1: Send backend email alerts to ALL contacts (PRIMARY METHOD)
@@ -139,7 +138,6 @@ export function SOSButton() {
       if (response.ok) {
         const data = await response.json();
         emailSuccessCount = data.contacts?.filter((c: any) => c.status === "sent").length || 0;
-        alertSent = true;
         console.log("[SOS] Email alerts sent successfully to", emailSuccessCount, "contacts");
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -151,30 +149,47 @@ export function SOSButton() {
       setSendingAlert(false);
     }
 
-    // STEP 2: WhatsApp for primary contact with phone number
-    if (primaryContact?.phone && !alertSent) {
-      const formattedPhone = formatPhoneForWhatsApp(primaryContact.phone);
-      
-      try {
-        const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-        alertSent = true;
-        console.log("[SOS] WhatsApp link opened for:", primaryContact.name);
-      } catch {
-        console.error("[SOS] WhatsApp failed");
-      }
-    }
+    // STEP 2: WhatsApp for ALL contacts with phone numbers (PARALLEL, not fallback)
+    const whatsappPromises = contacts
+      .filter((c) => c.phone)
+      .map(async (contact) => {
+        try {
+          const formattedPhone = formatPhoneForWhatsApp(contact.phone!);
+          const contactMessage = `🚨 EMERGENCY ALERT - ${contact.name} needs help! 🚨\n\n` +
+            `${primaryContact?.name || 'Someone'} is in an emergency situation.\n\n` +
+            `Location: ${locationUrl}\n\n` +
+            `- Sent via CrimeReport SOS`;
+          const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(contactMessage)}`;
+          window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+          console.log("[SOS] WhatsApp link opened for:", contact.name);
+        } catch (err) {
+          console.error(`[SOS] WhatsApp failed for ${contact.name}:`, err);
+        }
+      });
 
-    // STEP 3: SMS fallback (works on mobile devices)
-    if (primaryContact?.phone && !alertSent) {
-      const formattedPhone = primaryContact.phone.replace(/\D/g, "");
-      window.open(`sms:${formattedPhone}?body=${encodeURIComponent(message)}`, "_blank");
-      alertSent = true;
-      console.log("[SOS] SMS link opened for:", primaryContact.name);
-    }
+    // STEP 3: SMS for ALL contacts with phone numbers (PARALLEL, not fallback)
+    const smsPromises = contacts
+      .filter((c) => c.phone)
+      .map(async (contact) => {
+        try {
+          const formattedPhone = contact.phone!.replace(/\D/g, "");
+          const contactMessage = `🚨 EMERGENCY ALERT - ${contact.name} needs help! 🚨\n\n` +
+            `${primaryContact?.name || 'Someone'} is in an emergency situation.\n\n` +
+            `Location: ${locationUrl}\n\n` +
+            `- Sent via CrimeReport SOS`;
+          window.open(`sms:${formattedPhone}?body=${encodeURIComponent(contactMessage)}`, "_blank");
+          console.log("[SOS] SMS link opened for:", contact.name);
+        } catch (err) {
+          console.error(`[SOS] SMS failed for ${contact.name}:`, err);
+        }
+      });
+
+    // Fire WhatsApp and SMS in parallel with email (non-blocking)
+    Promise.allSettled([...whatsappPromises, ...smsPromises]).catch(() => {});
 
     // Show success modal if any method succeeded
-    if (alertSent || emailSuccessCount > 0) {
+    const hasContacts = contacts.length > 0;
+    if (emailSuccessCount > 0 || hasContacts) {
       setShowModal(true);
     } else {
       toast.warning("Could not send alerts automatically", {
