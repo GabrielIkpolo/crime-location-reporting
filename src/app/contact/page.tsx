@@ -99,16 +99,16 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" placeholder="Your Name" required />
+                  <Input id="name" name="name" placeholder="Your Name" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="your@email.com" required />
+                  <Input id="email" name="email" type="email" placeholder="your@email.com" required />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" placeholder="How can we help?" required />
+                <Input id="subject" name="subject" placeholder="How can we help?" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
@@ -117,6 +117,7 @@ export default function ContactPage() {
                   placeholder="Your message..." 
                   className="min-h-[150px]" 
                   required 
+                  name="message"
                 />
               </div>
               <Button type="submit" className="w-full gap-2 py-6" disabled={loading}>
