@@ -11,7 +11,7 @@ export const updateSettingSchema = z.object({
 });
 
 export const updateUserRoleSchema = z.object({
-  userId: z.string().uuid("Invalid user ID format"),
+  userId: z.string().min(12, "Invalid user ID format").max(24, "Invalid user ID format"),
   role: z.enum(["USER", "ADMIN"]),
 });
 

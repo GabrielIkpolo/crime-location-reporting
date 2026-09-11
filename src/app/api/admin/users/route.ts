@@ -110,7 +110,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(updatedUser);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: errorMessage }, { status: 400 });
+    console.error("[Admin Users] Failed to update user role:", error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

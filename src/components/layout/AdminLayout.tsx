@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShieldAlert, Users, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, ShieldAlert, Users, Settings, LogOut, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
@@ -12,6 +12,7 @@ const navItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Reports Queue", href: "/admin/reports", icon: ShieldAlert },
   { name: "User Management", href: "/admin/users", icon: Users },
+  { name: "Messages", href: "/admin/messages", icon: Mail },
   { name: "Audit Logs", href: "/admin/logs", icon: Settings },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];

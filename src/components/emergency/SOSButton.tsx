@@ -17,26 +17,14 @@ interface SosContact {
 /**
  * Format a phone number for WhatsApp deep link.
  * WhatsApp requires international format without +, -, or spaces.
- * Examples: "+2348012345678" → "2348012345678", "1-555-123-4567" → "15551234567"
  */
 function formatPhoneForWhatsApp(phone: string): string {
-  // Remove all non-digit characters
   let cleaned = phone.replace(/\D/g, "");
   
-  // If starts with 0, replace with country code prefix handling
-  // For Nigerian numbers starting with 0, prepend 234
   if (cleaned.startsWith("0")) {
-    const countryCodeMap: Record<string, string> = {
-      "01": "234",   // Nigeria mobile
-      "02": "234",   // Nigeria landline area code
-      "03": "234",   // etc.
-    };
-    
-    // Common Nigerian prefix mapping (simplified)
     if (cleaned.length >= 10 && cleaned[1] !== "9") {
       cleaned = "234" + cleaned.slice(1);
     } else if (!cleaned.startsWith("1") && !cleaned.startsWith("44")) {
-      // Assume Nigerian number if it doesn't look like US/UK
       cleaned = "234" + cleaned.slice(1);
     }
   }
@@ -63,7 +51,20 @@ export function SOSButton() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [sendingAlert, setSendingAlert] = useState(false);
 
+  // Load SOS contacts from the API (database) instead of localStorage
   useEffect(() => {
+    async function loadContacts() {
+      try {
+        const response = await fetch("/api/sos-contacts");
+        if (response.ok) {
+          const data: SosContact[] = await response.json();
+          setContacts(data);
+        }
+      } catch (error) {
+        console.error("[SOS] Failed to load contacts:", error);
+      }
+    }
+
     // Get initial location
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -75,15 +76,7 @@ export function SOSButton() {
       { enableHighAccuracy: true }
     );
 
-    // Load SOS contacts from localStorage
-    const stored = localStorage.getItem("crimereport-sos-contacts");
-    if (stored) {
-      try {
-        setContacts(JSON.parse(stored));
-      } catch {
-        setContacts([]);
-      }
-    }
+    loadContacts();
   }, []);
 
   const startSOS = useCallback(() => {
@@ -116,66 +109,52 @@ export function SOSButton() {
 
     const message = buildEmergencyMessage(locationUrl);
 
+    // Check if we have contacts from the database
     if (contacts.length === 0) {
-      toast.error("No emergency contacts configured", {
-        description: "Add trusted contacts in Settings > Emergency.",
-      });
+      setShowModal(false);
+      setShowContactsModal(true);
       return;
     }
 
-    // ========================================================================
-    // FALLBACK CHAIN: Web Share API → WhatsApp → SMS → Email (Backend)
-    // ========================================================================
-
     let alertSent = false;
-
-    // 1. PRIMARY: Try Web Share API (user picks their preferred app)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "🚨 Emergency SOS Alert",
-          text: message,
-          url: locationUrl,
-        });
-        alertSent = true;
-        console.log("[SOS] Web Share API succeeded");
-      } catch (err) {
-        // User cancelled or share failed — continue to fallbacks
-        console.log("[SOS] Web Share API skipped/failed:", err);
-      }
-    }
-
-    // 2. SECONDARY: Send backend email alerts to ALL contacts
-    if (!alertSent && location) {
-      setSendingAlert(true);
-      try {
-        await fetch("/api/sos/alert", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            latitude: location.lat,
-            longitude: location.lng,
-          }),
-        });
-        alertSent = true;
-        toast.success("Email alerts sent to all contacts!", {
-          description: "Your SOS email alerts have been delivered.",
-        });
-      } catch (error) {
-        console.error("[SOS] Backend email failed:", error);
-        // Continue with client-side fallbacks even if backend fails
-      } finally {
-        setSendingAlert(false);
-      }
-    }
-
-    // 3. TERTIARY: WhatsApp for primary contact with phone number
+    let emailSuccessCount = 0;
     const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0];
-    
+
+    // ========================================================================
+    // ORDERED FALLBACK CHAIN: Email → WhatsApp → SMS
+    // ========================================================================
+
+    // STEP 1: Send backend email alerts to ALL contacts (PRIMARY METHOD)
+    setSendingAlert(true);
+    try {
+      const response = await fetch("/api/sos/alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          latitude: location?.lat || 0,
+          longitude: location?.lng || 0,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        emailSuccessCount = data.contacts?.filter((c: any) => c.status === "sent").length || 0;
+        alertSent = true;
+        console.log("[SOS] Email alerts sent successfully to", emailSuccessCount, "contacts");
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[SOS] Backend email failed:", errorData);
+      }
+    } catch (error) {
+      console.error("[SOS] Backend email exception:", error);
+    } finally {
+      setSendingAlert(false);
+    }
+
+    // STEP 2: WhatsApp for primary contact with phone number
     if (primaryContact?.phone && !alertSent) {
       const formattedPhone = formatPhoneForWhatsApp(primaryContact.phone);
       
-      // Try WhatsApp first (works on both mobile and desktop with web.whatsapp.com)
       try {
         const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
@@ -186,7 +165,7 @@ export function SOSButton() {
       }
     }
 
-    // 4. QUATERNARY: SMS fallback (works on mobile devices)
+    // STEP 3: SMS fallback (works on mobile devices)
     if (primaryContact?.phone && !alertSent) {
       const formattedPhone = primaryContact.phone.replace(/\D/g, "");
       window.open(`sms:${formattedPhone}?body=${encodeURIComponent(message)}`, "_blank");
@@ -194,12 +173,9 @@ export function SOSButton() {
       console.log("[SOS] SMS link opened for:", primaryContact.name);
     }
 
-    // Show success modal
-    if (alertSent) {
-      toast.success("Emergency alert sent!", {
-        description: `Alert sent to ${primaryContact?.name || "your contacts"}.`,
-        duration: 5000,
-      });
+    // Show success modal if any method succeeded
+    if (alertSent || emailSuccessCount > 0) {
+      setShowModal(true);
     } else {
       toast.warning("Could not send alerts automatically", {
         description: "Please manually contact your emergency contacts.",
@@ -253,7 +229,7 @@ export function SOSButton() {
         )}
       </motion.div>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Modal — Emergency Alert Sent */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -317,9 +293,9 @@ export function SOSButton() {
               </p>
 
               <div className="space-y-2 text-sm text-muted-foreground mb-6">
-                <p>📱 SMS — Opens your default messaging app</p>
-                <p>💬 WhatsApp — Sends a message via WhatsApp</p>
                 <p>📧 Email — Sends detailed alert with location</p>
+                <p>💬 WhatsApp — Sends a message via WhatsApp</p>
+                <p>📱 SMS — Opens your default messaging app</p>
               </div>
 
               <Button onClick={() => setShowContactsModal(false)} className="w-full">

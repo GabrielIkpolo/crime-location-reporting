@@ -11,13 +11,42 @@ export async function GET(req: NextRequest) {
 
   try {
     const userId = session.user.id;
-    const reports = await prisma.report.findMany({
-      where: { reporterId: userId },
-      orderBy: { createdAt: "desc" },
+    
+    // Parse pagination params
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "10")), 50);
+    const skip = (page - 1) * limit;
+
+    // Optional filters
+    const statusFilter = searchParams.get("status") || undefined;
+    
+    // Build where clause
+    const whereClause: any = { reporterId: userId };
+    if (statusFilter && ["PENDING", "VERIFIED", "REJECTED", "CROWD_REPORTED"].includes(statusFilter)) {
+      whereClause.status = statusFilter;
+    }
+
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.report.count({ where: whereClause }),
+    ]);
+
+    return NextResponse.json({
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: skip + reports.length < total,
     });
-    return NextResponse.json(reports);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Reports/Me] Error:", error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

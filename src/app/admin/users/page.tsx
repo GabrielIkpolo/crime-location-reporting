@@ -121,7 +121,7 @@ export default function UserManagementPage() {
                   </TableCell>
                   <TableCell className="text-right flex justify-end items-center gap-2">
                     <Select 
-                      defaultValue={user.role} 
+                      value={user.role}
                       onValueChange={(val) => updateRole(user.id, val as UserRole)}
                       disabled={updatingId === user.id || deletingId === user.id}
                     >

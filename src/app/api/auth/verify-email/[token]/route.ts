@@ -35,12 +35,20 @@ export async function GET(
     // Redirect to login page with success message (client-side redirect)
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     
+    const securityHeaders: Record<string, string> = {
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+    };
+
     return new NextResponse(
       `<!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
           <title>Email Verified — CrimeReport</title>
           <style>
             body { 
@@ -71,7 +79,13 @@ export async function GET(
           </div>
         </body>
       </html>`,
-      { status: 200, headers: { "Content-Type": "text/html" } }
+      { 
+        status: 200, 
+        headers: {
+          ...securityHeaders,
+          "Content-Type": "text/html",
+        }
+      }
     );
   } catch (error) {
     console.error("[VerifyEmail] Error:", error);

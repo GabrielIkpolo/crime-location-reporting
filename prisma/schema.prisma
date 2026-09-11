@@ -275,3 +275,20 @@ model BroadcastAlert {
 
   createdAt DateTime @default(now())
 }
+
+// ============================================
+// Contact Messages — From the Contact Page Form
+// ============================================
+
+model ContactMessage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+  @@index([createdAt])
+}
