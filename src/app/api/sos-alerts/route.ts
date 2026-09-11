@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth-helper";
 import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
-import defaultTransporter from "@/lib/gikpsmail-adapter";
+import { queueEmail } from "@/lib/email-queue";
 
 /**
  * POST /api/sos-alerts
@@ -134,8 +134,9 @@ async function sendEmergencyContactsNotification(alert: any) {
       try {
         if (!contact.email) continue; // Skip if no email
         
-        await defaultTransporter.sendMail({
+        await queueEmail({
           to: contact.email,
+          from: `${process.env.EMAIL_FROM_NAME || "CrimeReport System"} <${process.env.EMAIL_FROM_ADDRESS || "noreply@crimereport.ng"}>`,
           subject: `🚨 Emergency Alert: ${reporterName} needs help!`,
           html: `
             <h2>Emergency SOS Alert</h2>
