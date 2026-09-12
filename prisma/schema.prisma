@@ -299,29 +299,29 @@ model ContactMessage {
 // ============================================
 
 enum EmailQueueStatus {
-  PENDING    // Waiting to be sent
-  SENDING    // Currently being retried
-  SENT       // Successfully delivered
-  FAILED     // Permanently failed after max retries
+  PENDING // Waiting to be sent
+  SENDING // Currently being retried
+  SENT // Successfully delivered
+  FAILED // Permanently failed after max retries
 }
 
 model EmailQueue {
-  id            String           @id @default(auto()) @map("_id") @db.ObjectId
-  status        EmailQueueStatus  @default(PENDING)
-  to            String
-  from          String?
-  cc            String?          // Comma-separated
-  bcc           String?          // Comma-separated
-  subject       String
-  html          String?          // HTML body (nullable)
-  text          String?          // Plain-text body
-  attempts      Int              @default(0)
-  maxAttempts   Int              @default(10)
-  nextRetryAt   DateTime         // When this email should be retried
-  lastError     String?          // Error message from last attempt
-  sentAt        DateTime?        // When successfully delivered
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  status      EmailQueueStatus @default(PENDING)
+  to          String
+  from        String?
+  cc          String? // Comma-separated
+  bcc         String? // Comma-separated
+  subject     String
+  html        String? // HTML body (nullable)
+  text        String? // Plain-text body
+  attempts    Int              @default(0)
+  maxAttempts Int              @default(10)
+  nextRetryAt DateTime // When this email should be retried
+  lastError   String? // Error message from last attempt
+  sentAt      DateTime? // When successfully delivered
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([status, nextRetryAt])
   @@index([createdAt])

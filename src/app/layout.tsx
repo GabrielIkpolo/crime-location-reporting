@@ -9,6 +9,11 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { SOSButton } from "@/components/emergency/SOSButton";
 
+// Start the in-app email queue scheduler on server boot.
+// This replaces Render.com's free cron jobs — emails queued during GikpsMail downtime
+// are automatically retried every 5 minutes (configurable via EMAIL_QUEUE_CRON_INTERVAL).
+import "@/lib/scheduler";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
